@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "PraiaAgora",
+    "slug": "praiaagora-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0ea5e9"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.praiaagora.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "PraiaAgora precisa da sua localização para mostrar praias próximas",
+        "NSLocationAlwaysUsageDescription": "PraiaAgora precisa da sua localização para enviar notificações sobre praias favoritas"
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyDavvE9VitYMiWJj5rN7x_KTzRQuTjuOlc"
+      }
+    },
+    "android": {
+      "package": "com.praiaagora.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDavvE9VitYMiWJj5rN7x_KTzRQuTjuOlc"
+        }
+      }
+    }
+  }
+}
