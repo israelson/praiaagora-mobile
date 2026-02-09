@@ -223,6 +223,15 @@ class ApiService {
     return response.data;
   }
 
+  // OAuth login helper
+  async oauthLogin(provider: string, access_token: string) {
+    const response = await this.api.post('/api/v1/auth/oauth/login', {
+      provider,
+      access_token,
+    });
+    return response.data;
+  }
+
   // Notifications endpoint
   async registerFCMToken(token: string) {
     const response = await this.api.post('/api/v1/notifications/register', {

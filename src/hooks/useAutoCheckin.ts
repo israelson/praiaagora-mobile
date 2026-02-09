@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
-import { Beach } from '../types/beach';
-import { api } from '../services/api';
+import api from '../services/api';
 
 interface UseAutoCheckinOptions {
   enabled?: boolean;
@@ -35,7 +34,7 @@ interface AutoCheckinState {
  * ```
  */
 export function useAutoCheckin(
-  beaches: Beach[],
+  beaches: any[],
   options: UseAutoCheckinOptions = {}
 ) {
   const {
@@ -113,30 +112,18 @@ export function useAutoCheckin(
         // Se estiver próximo (< maxDistance)
         if (distance <= maxDistance) {
           try {
-            // Fazer check-in via API
-            const response = await api.post(
-              `/crowd/beaches/${beach.id}/checkin`,
-              null,
-              {
-                params: {
-                  user_lat: latitude,
-                  user_lon: longitude
-                }
-              }
-            );
+            // Fazer check-in via ApiService helper
+            const data = await api.createAutoCheckin(beach.id, latitude, longitude);
 
-            if (response.data.success) {
-              // Marcar como checked nesta sessão
-              checkedBeachesRef.current.add(beach.id);
-              
-              setState(prev => ({
-                ...prev,
-                lastCheckin: new Date(),
-                error: null
-              }));
+            // Sucesso: marca como checked
+            checkedBeachesRef.current.add(beach.id);
+            setState(prev => ({
+              ...prev,
+              lastCheckin: new Date(),
+              error: null
+            }));
 
-              console.log(`✅ Check-in automático: ${beach.name} (${distance.toFixed(0)}m)`);
-            }
+            console.log(`✅ Check-in automático: ${beach.name} (${distance.toFixed(0)}m)`);
           } catch (error: any) {
             // Erro 400 = muito longe, ignorar silenciosamente
             if (error.response?.status !== 400) {

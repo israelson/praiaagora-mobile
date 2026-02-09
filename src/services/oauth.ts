@@ -27,7 +27,7 @@ export interface OAuthLoginResponse {
  */
 export const useGoogleAuth = () => {
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: GOOGLE_CLIENT_ID,
+    clientId: GOOGLE_CLIENT_ID,
     iosClientId: GOOGLE_CLIENT_ID,
     androidClientId: GOOGLE_CLIENT_ID,
     webClientId: GOOGLE_CLIENT_ID,
@@ -58,12 +58,8 @@ export const loginWithOAuth = async (
   accessToken: string
 ): Promise<OAuthLoginResponse> => {
   try {
-    const response = await api.post<OAuthLoginResponse>('/auth/oauth/login', {
-      provider,
-      access_token: accessToken,
-    });
-
-    return response.data;
+    const data = await api.oauthLogin(provider, accessToken);
+    return data as OAuthLoginResponse;
   } catch (error: any) {
     console.error('OAuth login error:', error.response?.data || error);
     throw error;

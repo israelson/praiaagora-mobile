@@ -11,6 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import api from '../../services/api';
@@ -23,6 +24,7 @@ export default function HomeScreen({ navigation }: any) {
   const { user } = useAuth();
   const { favorites, isFavorite, addFavorite, removeFavorite, loadFavorites } = useFavorites();
   const [nearbyBeaches, setNearbyBeaches] = useState([]);
+  const [favoriteBeaches, setFavoriteBeaches] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<any>(null);
@@ -38,6 +40,26 @@ export default function HomeScreen({ navigation }: any) {
     loadData();
     loadFavorites();
   }, []);
+
+  useEffect(() => {
+    // When favorites (ids) change, fetch beach details for display
+    const loadFavoriteDetails = async () => {
+      try {
+        if (!favorites || favorites.length === 0) {
+          setFavoriteBeaches([]);
+          return;
+        }
+
+        const results = await Promise.all(favorites.map((id) => api.getBeachById(id)));
+        setFavoriteBeaches(results || []);
+      } catch (error) {
+        console.error('Error loading favorite beaches:', error);
+        setFavoriteBeaches([]);
+      }
+    };
+
+    loadFavoriteDetails();
+  }, [favorites]);
 
   const loadData = async () => {
     setLoading(true);
@@ -55,8 +77,10 @@ export default function HomeScreen({ navigation }: any) {
 
   const loadNearbyBeaches = async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      // Mostrar rationale antes do prompt nativo para evitar que o sistema
+      // apresente a caixa de diálogo inesperadamente logo após o login.
+      const granted = await requestLocationPermission();
+      if (!granted) {
         console.log('Location permission not granted');
         return;
       }
@@ -77,9 +101,9 @@ export default function HomeScreen({ navigation }: any) {
 
   const loadRecommendations = async () => {
     try {
-      // Solicitar permissão de localização
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      // Mostrar rationale antes do prompt nativo
+      const granted = await requestLocationPermission();
+      if (!granted) {
         console.log('Location permission not granted for recommendations');
         return;
       }
@@ -119,6 +143,72 @@ export default function HomeScreen({ navigation }: any) {
       setRecommendations(mappedRecommendations.slice(0, 5));
     } catch (error) {
       console.error('Error loading recommendations:', error);
+    }
+  };
+
+  // Mostra explicação para o usuário e solicita permissão de localização.
+  // Retorna true se a permissão foi concedida.
+  const requestLocationPermission = async (): Promise<boolean> => {
+    try {
+      // If we already stored that permission was granted, skip prompt
+      const stored = await AsyncStorage.getItem('location_permission_granted');
+      if (stored === 'granted') return true;
+
+      // If OS permission is already granted, persist and return
+      const existing = await Location.getForegroundPermissionsAsync();
+      if (existing.status === 'granted') {
+        await AsyncStorage.setItem('location_permission_granted', 'granted');
+        return true;
+      }
+
+      // If rationale was already shown once, request directly
+      const rationaleShown = await AsyncStorage.getItem('location_permission_rationale_shown');
+      if (rationaleShown === 'true') {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          await AsyncStorage.setItem('location_permission_granted', 'granted');
+        }
+        return status === 'granted';
+      }
+
+      // First time: show rationale alert and record that we showed it
+      return await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          'Permissão de Localização',
+          'Permita o acesso à sua localização para mostrar praias próximas e recomendações personalizadas.',
+          [
+            {
+              text: 'Cancelar',
+              style: 'cancel',
+              onPress: async () => {
+                try { await AsyncStorage.setItem('location_permission_rationale_shown', 'true'); } catch {}
+                resolve(false);
+              }
+            },
+            {
+              text: 'Permitir',
+              onPress: async () => {
+                try {
+                  const { status } = await Location.requestForegroundPermissionsAsync();
+                  if (status === 'granted') {
+                    await AsyncStorage.setItem('location_permission_granted', 'granted');
+                  }
+                  await AsyncStorage.setItem('location_permission_rationale_shown', 'true');
+                  resolve(status === 'granted');
+                } catch (e) {
+                  console.error('Erro ao solicitar permissão de localização', e);
+                  try { await AsyncStorage.setItem('location_permission_rationale_shown', 'true'); } catch {}
+                  resolve(false);
+                }
+              }
+            }
+          ],
+          { cancelable: true }
+        );
+      });
+    } catch (e) {
+      console.error('Erro no fluxo de permissão de localização', e);
+      return false;
     }
   };
 
@@ -185,35 +275,27 @@ export default function HomeScreen({ navigation }: any) {
               <Text style={styles.actionText}>Buscar</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => navigation.navigate('Favorites')}
-            >
-              <Ionicons name="heart" size={32} color={theme.colors.primary} />
-              <Text style={styles.actionText}>Favoritas</Text>
-            </TouchableOpacity>
+            
           </View>
         </View>
 
-        {/* Nearby Beaches */}
-        {nearbyBeaches.length > 0 && (
+        {/* Favorite Beaches */}
+        {favoriteBeaches.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Praias Próximas</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Explore')}>
+              <Text style={styles.sectionTitle}>Praias Favoritas</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
                 <Text style={styles.seeAll}>Ver todas</Text>
               </TouchableOpacity>
             </View>
 
-            {nearbyBeaches.map((beach: any) => (
+            {favoriteBeaches.map((beach: any) => (
               <BeachCard
                 key={beach.id}
                 beach={beach}
                 onPress={() => navigation.navigate('BeachDetail', { beachId: beach.id })}
                 isFavorite={isFavorite(beach.id)}
                 onToggleFavorite={() => handleToggleFavorite(beach.id)}
-                showDistance
-                distance={calculateDistance(beach.latitude, beach.longitude)}
               />
             ))}
           </View>
@@ -223,8 +305,10 @@ export default function HomeScreen({ navigation }: any) {
         {recommendations.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recomendadas para Você</Text>
-              <Text style={styles.sectionSubtitle}>Baseado na sua localização</Text>
+              <View>
+                <Text style={styles.sectionTitle}>Recomendadas para Você</Text>
+                <Text style={styles.sectionSubtitle}>Baseado na sua localização</Text>
+              </View>
             </View>
 
             {recommendations.map((beach: any) => (

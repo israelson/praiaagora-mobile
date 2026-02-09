@@ -13,7 +13,6 @@ import { useFavorites } from '../../contexts/FavoritesContext';
 import api from '../../services/api';
 import BeachCard from '../../components/beach/BeachCard';
 import Input from '../../components/ui/Input';
-import ActivityFilter from '../../components/ActivityFilter';
 import { theme } from '../../theme';
 
 const CITIES = [
@@ -36,13 +35,12 @@ const WATER_QUALITY_FILTERS = [
 
 export default function ExploreScreen({ navigation }: any) {
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
-  const [beaches, setBeaches] = useState([]);
-  const [filteredBeaches, setFilteredBeaches] = useState([]);
+  const [beaches, setBeaches] = useState<any[]>([]);
+  const [filteredBeaches, setFilteredBeaches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('Todas');
   const [waterQualityFilter, setWaterQualityFilter] = useState('ALL');
-  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
 
   useEffect(() => {
     loadBeaches();
@@ -50,19 +48,14 @@ export default function ExploreScreen({ navigation }: any) {
 
   useEffect(() => {
     filterBeaches();
-  }, [searchQuery, selectedCity, waterQualityFilter, selectedActivities, beaches]);
+  }, [searchQuery, selectedCity, waterQualityFilter, beaches]);
 
   const loadBeaches = async () => {
     setLoading(true);
     try {
       const params: any = { limit: 200 };
-      if (selectedActivities.length > 0) {
-        params.activities = selectedActivities.join(',');
-      }
       const response = await api.getBeaches(params);
-      // A API retorna diretamente um array, não um objeto com 'beaches'
       const beachesArray = Array.isArray(response) ? response : response.beaches || [];
-      console.log(`Loaded ${beachesArray.length} beaches from API`);
       setBeaches(beachesArray);
     } catch (error) {
       console.error('Error loading beaches:', error);
@@ -75,14 +68,10 @@ export default function ExploreScreen({ navigation }: any) {
   const filterBeaches = () => {
     let filtered = [...beaches];
 
-    // Filter by city
     if (selectedCity !== 'Todas') {
-      filtered = filtered.filter(
-        (beach: any) => beach.city === selectedCity
-      );
+      filtered = filtered.filter((beach: any) => beach.city === selectedCity);
     }
 
-    // Filter by water quality
     if (waterQualityFilter !== 'ALL') {
       if (waterQualityFilter === 'PROPER') {
         filtered = filtered.filter(
@@ -99,7 +88,6 @@ export default function ExploreScreen({ navigation }: any) {
       }
     }
 
-    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter((beach: any) =>
         beach.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -109,21 +97,6 @@ export default function ExploreScreen({ navigation }: any) {
 
     setFilteredBeaches(filtered);
   };
-
-  const handleToggleActivity = (activity: string) => {
-    setSelectedActivities(prev => {
-      if (prev.includes(activity)) {
-        return prev.filter(a => a !== activity);
-      } else {
-        return [...prev, activity];
-      }
-    });
-  };
-
-  // Reload beaches when activities change
-  useEffect(() => {
-    loadBeaches();
-  }, [selectedActivities]);
 
   const handleToggleFavorite = useCallback(async (beachId: string) => {
     try {
@@ -213,11 +186,6 @@ export default function ExploreScreen({ navigation }: any) {
           contentContainerStyle={styles.filterList}
         />
       </View>
-
-      <ActivityFilter 
-        selectedActivities={selectedActivities}
-        onToggleActivity={handleToggleActivity}
-      />
 
       <Text style={styles.resultsCount}>
         {filteredBeaches.length} praias encontradas

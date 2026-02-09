@@ -15,7 +15,7 @@ import { theme } from '../../theme';
 
 export default function FavoritesScreen({ navigation }: any) {
   const { favorites, isFavorite, removeFavorite, loadFavorites } = useFavorites();
-  const [favoriteBeaches, setFavoriteBeaches] = useState([]);
+  const [favoriteBeaches, setFavoriteBeaches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

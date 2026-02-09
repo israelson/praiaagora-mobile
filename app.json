@@ -2,6 +2,7 @@
   "expo": {
     "name": "PraiaAgora",
     "slug": "praiaagora-mobile",
+    "scheme": "praiaagora",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -34,6 +35,9 @@
           "apiKey": "AIzaSyDavvE9VitYMiWJj5rN7x_KTzRQuTjuOlc"
         }
       }
-    }
+    },
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }

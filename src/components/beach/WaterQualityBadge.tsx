@@ -27,12 +27,13 @@ export default function WaterQualityBadge({
   size = 'small',
   updatedAt,
 }: WaterQualityBadgeProps) {
+  const badgeSize = size === 'large' ? 'medium' : size;
   if (!quality) {
     return (
       <Badge
         label="Sem dados"
         variant="neutral"
-        size={size}
+        size={badgeSize}
       />
     );
   }
@@ -80,7 +81,7 @@ export default function WaterQualityBadge({
         <Badge
           label={badgeConfig.label}
           variant={badgeConfig.variant}
-          size={size}
+          size={badgeSize}
         />
       )}
       

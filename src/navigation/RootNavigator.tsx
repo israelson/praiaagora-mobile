@@ -14,6 +14,8 @@ import HomeScreen from '../screens/main/HomeScreen';
 import ExploreScreen from '../screens/main/ExploreScreen';
 import FavoritesScreen from '../screens/main/FavoritesScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
+import EditProfileScreen from '../screens/main/EditProfileScreen';
+import PrivacyScreen from '../screens/main/PrivacyScreen';
 import BeachDetailScreen from '../screens/main/BeachDetailScreen';
 import CheckInScreen from '../screens/main/CheckInScreen';
 import MapScreen from '../screens/main/MapScreen';
@@ -137,6 +139,16 @@ function MainStack() {
         name="PartnerDetail" 
         component={PartnerDetailScreen}
         options={{ title: 'Detalhes do Parceiro' }}
+      />
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{ title: 'Editar Perfil' }}
+      />
+      <Stack.Screen
+        name="Privacy"
+        component={PrivacyScreen}
+        options={{ title: 'Privacidade' }}
       />
     </Stack.Navigator>
   );

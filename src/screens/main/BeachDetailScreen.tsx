@@ -8,8 +8,10 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import api from '../../services/api';
@@ -44,10 +46,44 @@ export default function BeachDetailScreen({ route, navigation }: any) {
   const [partners, setPartners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showIcpBreakdown, setShowIcpBreakdown] = useState(false);
+  const [checkedInToday, setCheckedInToday] = useState(false);
+
+  const isSameDay = (isoDate: string) => {
+    try {
+      const a = new Date(isoDate).toISOString().slice(0, 10);
+      const b = new Date().toISOString().slice(0, 10);
+      return a === b;
+    } catch (e) {
+      return false;
+    }
+  };
 
   useEffect(() => {
     loadBeachData();
   }, [beachId]);
+
+  // Load persisted last check-in for this beach to show indicator in header
+  useEffect(() => {
+    const loadCheckin = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(`last_checkin:${beachId}`);
+        if (raw) {
+          const obj = JSON.parse(raw);
+          setCheckedInToday(!!(obj?.date && isSameDay(obj.date)));
+        } else {
+          setCheckedInToday(false);
+        }
+      } catch (e) {
+        console.error('Erro lendo último check-in', e);
+        setCheckedInToday(false);
+      }
+    };
+
+    loadCheckin();
+    const unsubscribe = navigation.addListener('focus', loadCheckin);
+    return unsubscribe;
+  }, [beachId, navigation]);
 
   const loadBeachData = async (isRefreshing: boolean = false) => {
     if (isRefreshing) {
@@ -89,7 +125,24 @@ export default function BeachDetailScreen({ route, navigation }: any) {
   const handleToggleFavorite = async () => {
     try {
       if (isFavorite(beachId)) {
-        await removeFavorite(beachId);
+        Alert.alert(
+          'Remover favorito',
+          'Deseja realmente remover esta praia dos favoritos?',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+              text: 'Remover',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await removeFavorite(beachId);
+                } catch (err) {
+                  Alert.alert('Erro', 'Não foi possível atualizar os favoritos');
+                }
+              },
+            },
+          ]
+        );
       } else {
         await addFavorite(beachId);
       }
@@ -135,50 +188,98 @@ export default function BeachDetailScreen({ route, navigation }: any) {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        {/* Header with gradient */}
         <LinearGradient
           colors={[theme.colors.primary, theme.colors.primaryDark]}
           style={styles.header}
         >
-          <Text style={styles.beachName}>{beach.name}</Text>
+          <View style={styles.headerTopRow}>
+            <Text style={styles.beachName}>
+              {beach.name}
+            </Text>
+          </View>
+
           <View style={styles.locationContainer}>
             <Ionicons name="location" size={16} color={theme.colors.textInverse} />
             <Text style={styles.cityName}>{beach.city}</Text>
           </View>
-          
-          {/* Botão Como Chegar */}
-          {beach.latitude && beach.longitude && (
-            <TouchableOpacity
-              style={styles.navigationButton}
-              onPress={() => openNavigationWithChoice(beach.latitude, beach.longitude, beach.name)}
-            >
-              <Ionicons name="navigate" size={20} color={theme.colors.textInverse} />
-              <Text style={styles.navigationButtonText}>Como Chegar</Text>
-            </TouchableOpacity>
-          )}
+
+          {/* Botão Como Chegar e ações (Check-in / Favoritos) */}
+          <View style={styles.navigationActionsRow}>
+            {beach.latitude && beach.longitude && (
+              <TouchableOpacity
+                style={styles.navigationButton}
+                onPress={() => openNavigationWithChoice(beach.latitude, beach.longitude, beach.name)}
+              >
+                <Ionicons name="navigate" size={20} color={theme.colors.textInverse} />
+                <Text style={styles.navigationButtonText}>Como Chegar</Text>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.headerActionsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.headerCheckinButton,
+                  checkedInToday && { backgroundColor: theme.colors.success },
+                ]}
+                onPress={() => navigation.navigate('CheckIn', { beachId })}
+              >
+                <Ionicons
+                  name="checkmark-done"
+                  size={16}
+                  color={checkedInToday ? theme.colors.textInverse : theme.colors.primary}
+                />
+                <Text
+                  style={[
+                    styles.headerCheckinText,
+                    checkedInToday && { color: theme.colors.textInverse },
+                  ]}
+                >
+                  Check-in
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={handleToggleFavorite} style={styles.favoriteButton}>
+                <Ionicons
+                  name={isFavorite(beachId) ? 'heart' : 'heart-outline'}
+                  size={26}
+                  color={isFavorite(beachId) ? theme.colors.error : theme.colors.textInverse}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
         </LinearGradient>
 
         <View style={styles.content}>
-          {/* ICP Score Card - Destaque */}
+          {/* ICP Score Card - Destaque (toque para ver composição) */}
           {conditions && conditions.icp && (
-            <Card style={styles.icpCard}>
-              <View style={styles.icpHeader}>
-                <Text style={styles.icpLabel}>Índice de Conforto Praial</Text>
-                <Badge
-                  label={conditions.icp_rating}
-                  variant={
-                    conditions.icp >= 80 ? 'success' :
-                    conditions.icp >= 60 ? 'info' : 'warning'
-                  }
-                />
-              </View>
-              <Text style={styles.icpScore}>{conditions.icp.toFixed(0)}</Text>
-              <Text style={styles.icpDescription}>
-                {conditions.icp >= 80 ? 'Condições excelentes para aproveitar a praia!' :
-                 conditions.icp >= 60 ? 'Boas condições para ir à praia' :
-                 'Condições regulares, verifique os detalhes abaixo'}
-              </Text>
-            </Card>
+            <TouchableOpacity onPress={() => setShowIcpBreakdown((s) => !s)} activeOpacity={0.8}>
+              <Card style={styles.icpCard}>
+                <View style={styles.icpHeader}>
+                  <Text style={styles.icpLabel}>Índice de Conforto Praial</Text>
+                  <View style={styles.icpHeaderRight}>
+                    <Badge
+                      label={conditions.icp_rating}
+                      variant={
+                        conditions.icp >= 80 ? 'success' :
+                        conditions.icp >= 60 ? 'info' : 'warning'
+                      }
+                    />
+                    <Ionicons
+                      name={showIcpBreakdown ? 'caret-up' : 'caret-down'}
+                      size={18}
+                      color={theme.colors.textSecondary}
+                      style={{ marginLeft: 8 }}
+                    />
+                  </View>
+                </View>
+                <Text style={styles.icpScore}>{conditions.icp.toFixed(0)}</Text>
+                <Text style={styles.icpDescription}>
+                  {conditions.icp >= 80 ? 'Condições excelentes para aproveitar a praia!' :
+                   conditions.icp >= 60 ? 'Boas condições para ir à praia' :
+                   'Condições regulares, toque para ver a composição do índice'}
+                </Text>
+              </Card>
+            </TouchableOpacity>
           )}
 
           {/* Condições Climáticas */}
@@ -255,13 +356,13 @@ export default function BeachDetailScreen({ route, navigation }: any) {
             </Card>
           )}
 
-          {/* Qualidade da Água (Balneabilidade) */}
+          {/* Qualidade da Água */}
           {conditions?.conditions && (
             <Card style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="water" size={24} color={theme.colors.primary} />
-                <Text style={styles.sectionTitle}>Balneabilidade</Text>
-              </View>
+                <View style={styles.sectionHeaderLeft}>
+                  <Ionicons name="water" size={24} color={theme.colors.primary} />
+                  <Text style={styles.sectionTitle}>Qualidade da Água</Text>
+                </View>
               
               {conditions.conditions.water_quality ? (
                 <View style={styles.waterQualityContainer}>
@@ -309,193 +410,216 @@ export default function BeachDetailScreen({ route, navigation }: any) {
                 )}
               </View>
               ) : (
-                /* Mensagem quando NÃO há dados de balneabilidade */
-                <View style={styles.noDataContainer}>
+                /* Mensagem quando NÃO há dados de monitoramento IMA-SC */
+                <TouchableOpacity
+                  style={styles.noDataContainer}
+                  onPress={() =>
+                    Alert.alert(
+                      'Importante',
+                      'A ausência de dados de monitoramento IMA‑SC não significa que a água esteja imprópria. Praias sem monitoramento podem ter boa qualidade, mas não há análises oficiais disponíveis.'
+                    )
+                  }
+                >
                   <Ionicons name="information-circle-outline" size={48} color={theme.colors.info} />
                   <Text style={styles.noDataTitle}>Sem monitoramento IMA-SC</Text>
-                  <Text style={styles.noDataText}>
-                    Esta praia não possui dados de balneabilidade porque não está incluída no programa de monitoramento do Instituto do Meio Ambiente de Santa Catarina (IMA-SC).
-                  </Text>
-                  <Text style={styles.noDataNote}>
-                    ℹ️ <Text style={styles.noDataNoteHighlight}>Importante:</Text> A ausência de dados não significa que a água esteja imprópria. Praias sem monitoramento podem ter boa qualidade, mas não há análises oficiais disponíveis.
-                  </Text>
-                </View>
+                  <Text style={styles.noDataText}>Toque para mais informações</Text>
+                </TouchableOpacity>
               )}
             </Card>
           )}
 
-          {/* ICP Breakdown */}
+          {/* ICP Breakdown shown in modal */}
           {conditions?.icp_breakdown && (
-            <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Composição do ICP</Text>
-              <Text style={styles.breakdownSubtitle}>
-                Veja como calculamos o Índice de Conforto Praial:
-              </Text>
-
-              <View style={styles.breakdownList}>
-                {conditions.icp_breakdown.water_quality && (
-                  <View style={styles.breakdownItem}>
-                    <View style={styles.breakdownHeader}>
-                      <View style={styles.breakdownLabelContainer}>
-                        <Ionicons name="water" size={18} color={theme.colors.primary} />
-                        <Text style={styles.breakdownLabel}>Qualidade da Água</Text>
-                      </View>
-                      <Text style={styles.breakdownScore}>
-                        {conditions.icp_breakdown.water_quality.score.toFixed(0)}
-                      </Text>
-                    </View>
-                    <View style={styles.breakdownBarContainer}>
-                      <View 
-                        style={[
-                          styles.breakdownBar, 
-                          { 
-                            width: `${conditions.icp_breakdown.water_quality.score}%`,
-                            backgroundColor: conditions.icp_breakdown.water_quality.score >= 80 ? theme.colors.success : 
-                                           conditions.icp_breakdown.water_quality.score >= 60 ? theme.colors.info : 
-                                           theme.colors.warning
-                          }
-                        ]} 
-                      />
-                    </View>
+            <Modal
+              visible={showIcpBreakdown}
+              animationType="slide"
+              transparent={true}
+              onRequestClose={() => setShowIcpBreakdown(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.sectionTitle}>Composição do ICP</Text>
+                    <TouchableOpacity onPress={() => setShowIcpBreakdown(false)}>
+                      <Ionicons name="close" size={22} color={theme.colors.textSecondary} />
+                    </TouchableOpacity>
                   </View>
-                )}
 
-                {conditions.icp_breakdown.temperature && (
-                  <View style={styles.breakdownItem}>
-                    <View style={styles.breakdownHeader}>
-                      <View style={styles.breakdownLabelContainer}>
-                        <Ionicons name="thermometer" size={18} color={theme.colors.primary} />
-                        <Text style={styles.breakdownLabel}>Temperatura</Text>
-                      </View>
-                      <Text style={styles.breakdownScore}>
-                        {conditions.icp_breakdown.temperature.score.toFixed(0)}
+                  <ScrollView>
+                    <Card style={[styles.section, { marginTop: 8 }]}> 
+                      <Text style={styles.breakdownSubtitle}>
+                        Veja como calculamos o Índice de Conforto Praial:
                       </Text>
-                    </View>
-                    <View style={styles.breakdownBarContainer}>
-                      <View 
-                        style={[
-                          styles.breakdownBar, 
-                          { 
-                            width: `${conditions.icp_breakdown.temperature.score}%`,
-                            backgroundColor: conditions.icp_breakdown.temperature.score >= 80 ? theme.colors.success : 
-                                           conditions.icp_breakdown.temperature.score >= 60 ? theme.colors.info : 
-                                           theme.colors.warning
-                          }
-                        ]} 
-                      />
-                    </View>
-                  </View>
-                )}
 
-                {conditions.icp_breakdown.wind && (
-                  <View style={styles.breakdownItem}>
-                    <View style={styles.breakdownHeader}>
-                      <View style={styles.breakdownLabelContainer}>
-                        <Ionicons name="flag" size={18} color={theme.colors.primary} />
-                        <Text style={styles.breakdownLabel}>Vento</Text>
-                      </View>
-                      <Text style={styles.breakdownScore}>
-                        {conditions.icp_breakdown.wind.score.toFixed(0)}
-                      </Text>
-                    </View>
-                    <View style={styles.breakdownBarContainer}>
-                      <View 
-                        style={[
-                          styles.breakdownBar, 
-                          { 
-                            width: `${conditions.icp_breakdown.wind.score}%`,
-                            backgroundColor: conditions.icp_breakdown.wind.score >= 80 ? theme.colors.success : 
-                                           conditions.icp_breakdown.wind.score >= 60 ? theme.colors.info : 
-                                           theme.colors.warning
-                          }
-                        ]} 
-                      />
-                    </View>
-                  </View>
-                )}
+                      <View style={styles.breakdownList}>
+                        {/* Água: se não houver dados, mostramos 0 para refletir ausência de monitoramento */}
+                        {conditions.icp_breakdown && (
+                          <View style={styles.breakdownItem}>
+                            <View style={styles.breakdownHeader}>
+                              <View style={styles.breakdownLabelContainer}>
+                                <Ionicons name="water" size={18} color={theme.colors.primary} />
+                                <Text style={styles.breakdownLabel}>Qualidade da Água</Text>
+                              </View>
+                              <Text style={styles.breakdownScore}>
+                                {(conditions.icp_breakdown.water_quality?.score ?? 0).toFixed(0)}
+                              </Text>
+                            </View>
+                            <View style={styles.breakdownBarContainer}>
+                              <View 
+                                style={[
+                                  styles.breakdownBar, 
+                                  { 
+                                    width: `${(conditions.icp_breakdown.water_quality?.score ?? 0)}%`,
+                                    backgroundColor: (conditions.icp_breakdown.water_quality?.score ?? 0) >= 80 ? theme.colors.success : 
+                                                   (conditions.icp_breakdown.water_quality?.score ?? 0) >= 60 ? theme.colors.info : 
+                                                   theme.colors.warning
+                                  }
+                                ]} 
+                              />
+                            </View>
+                          </View>
+                        )}
 
-                {conditions.icp_breakdown.uv && (
-                  <View style={styles.breakdownItem}>
-                    <View style={styles.breakdownHeader}>
-                      <View style={styles.breakdownLabelContainer}>
-                        <Ionicons name="sunny" size={18} color={theme.colors.primary} />
-                        <Text style={styles.breakdownLabel}>Índice UV</Text>
-                      </View>
-                      <Text style={styles.breakdownScore}>
-                        {conditions.icp_breakdown.uv.score.toFixed(0)}
-                      </Text>
-                    </View>
-                    <View style={styles.breakdownBarContainer}>
-                      <View 
-                        style={[
-                          styles.breakdownBar, 
-                          { 
-                            width: `${conditions.icp_breakdown.uv.score}%`,
-                            backgroundColor: conditions.icp_breakdown.uv.score >= 80 ? theme.colors.success : 
-                                           conditions.icp_breakdown.uv.score >= 60 ? theme.colors.info : 
-                                           theme.colors.warning
-                          }
-                        ]} 
-                      />
-                    </View>
-                  </View>
-                )}
+                        {conditions.icp_breakdown.temperature && (
+                          <View style={styles.breakdownItem}>
+                            <View style={styles.breakdownHeader}>
+                              <View style={styles.breakdownLabelContainer}>
+                                <Ionicons name="thermometer" size={18} color={theme.colors.primary} />
+                                <Text style={styles.breakdownLabel}>Temperatura</Text>
+                              </View>
+                              <Text style={styles.breakdownScore}>
+                                {conditions.icp_breakdown.temperature.score.toFixed(0)}
+                              </Text>
+                            </View>
+                            <View style={styles.breakdownBarContainer}>
+                              <View 
+                                style={[
+                                  styles.breakdownBar, 
+                                  { 
+                                    width: `${conditions.icp_breakdown.temperature.score}%`,
+                                    backgroundColor: conditions.icp_breakdown.temperature.score >= 80 ? theme.colors.success : 
+                                                   conditions.icp_breakdown.temperature.score >= 60 ? theme.colors.info : 
+                                                   theme.colors.warning
+                                  }
+                                ]} 
+                              />
+                            </View>
+                          </View>
+                        )}
 
-                {conditions.icp_breakdown.precipitation && (
-                  <View style={styles.breakdownItem}>
-                    <View style={styles.breakdownHeader}>
-                      <View style={styles.breakdownLabelContainer}>
-                        <Ionicons name="rainy" size={18} color={theme.colors.primary} />
-                        <Text style={styles.breakdownLabel}>Precipitação</Text>
-                      </View>
-                      <Text style={styles.breakdownScore}>
-                        {conditions.icp_breakdown.precipitation.score.toFixed(0)}
-                      </Text>
-                    </View>
-                    <View style={styles.breakdownBarContainer}>
-                      <View 
-                        style={[
-                          styles.breakdownBar, 
-                          { 
-                            width: `${conditions.icp_breakdown.precipitation.score}%`,
-                            backgroundColor: conditions.icp_breakdown.precipitation.score >= 80 ? theme.colors.success : 
-                                           conditions.icp_breakdown.precipitation.score >= 60 ? theme.colors.info : 
-                                           theme.colors.warning
-                          }
-                        ]} 
-                      />
-                    </View>
-                  </View>
-                )}
+                        {conditions.icp_breakdown.wind && (
+                          <View style={styles.breakdownItem}>
+                            <View style={styles.breakdownHeader}>
+                              <View style={styles.breakdownLabelContainer}>
+                                <Ionicons name="flag" size={18} color={theme.colors.primary} />
+                                <Text style={styles.breakdownLabel}>Vento</Text>
+                              </View>
+                              <Text style={styles.breakdownScore}>
+                                {conditions.icp_breakdown.wind.score.toFixed(0)}
+                              </Text>
+                            </View>
+                            <View style={styles.breakdownBarContainer}>
+                              <View 
+                                style={[
+                                  styles.breakdownBar, 
+                                  { 
+                                    width: `${conditions.icp_breakdown.wind.score}%`,
+                                    backgroundColor: conditions.icp_breakdown.wind.score >= 80 ? theme.colors.success : 
+                                                   conditions.icp_breakdown.wind.score >= 60 ? theme.colors.info : 
+                                                   theme.colors.warning
+                                  }
+                                ]} 
+                              />
+                            </View>
+                          </View>
+                        )}
 
-                {conditions.icp_breakdown.crowd && (
-                  <View style={styles.breakdownItem}>
-                    <View style={styles.breakdownHeader}>
-                      <View style={styles.breakdownLabelContainer}>
-                        <Ionicons name="people" size={18} color={theme.colors.primary} />
-                        <Text style={styles.breakdownLabel}>Lotação</Text>
+                        {conditions.icp_breakdown.uv && (
+                          <View style={styles.breakdownItem}>
+                            <View style={styles.breakdownHeader}>
+                              <View style={styles.breakdownLabelContainer}>
+                                <Ionicons name="sunny" size={18} color={theme.colors.primary} />
+                                <Text style={styles.breakdownLabel}>Índice UV</Text>
+                              </View>
+                              <Text style={styles.breakdownScore}>
+                                {conditions.icp_breakdown.uv.score.toFixed(0)}
+                              </Text>
+                            </View>
+                            <View style={styles.breakdownBarContainer}>
+                              <View 
+                                style={[
+                                  styles.breakdownBar, 
+                                  { 
+                                    width: `${conditions.icp_breakdown.uv.score}%`,
+                                    backgroundColor: conditions.icp_breakdown.uv.score >= 80 ? theme.colors.success : 
+                                                   conditions.icp_breakdown.uv.score >= 60 ? theme.colors.info : 
+                                                   theme.colors.warning
+                                  }
+                                ]} 
+                              />
+                            </View>
+                          </View>
+                        )}
+
+                        {conditions.icp_breakdown.precipitation && (
+                          <View style={styles.breakdownItem}>
+                            <View style={styles.breakdownHeader}>
+                              <View style={styles.breakdownLabelContainer}>
+                                <Ionicons name="rainy" size={18} color={theme.colors.primary} />
+                                <Text style={styles.breakdownLabel}>Precipitação</Text>
+                              </View>
+                              <Text style={styles.breakdownScore}>
+                                {conditions.icp_breakdown.precipitation.score.toFixed(0)}
+                              </Text>
+                            </View>
+                            <View style={styles.breakdownBarContainer}>
+                              <View 
+                                style={[
+                                  styles.breakdownBar, 
+                                  { 
+                                    width: `${conditions.icp_breakdown.precipitation.score}%`,
+                                    backgroundColor: conditions.icp_breakdown.precipitation.score >= 80 ? theme.colors.success : 
+                                                   conditions.icp_breakdown.precipitation.score >= 60 ? theme.colors.info : 
+                                                   theme.colors.warning
+                                  }
+                                ]} 
+                              />
+                            </View>
+                          </View>
+                        )}
+
+                        {conditions.icp_breakdown.crowd && (
+                          <View style={styles.breakdownItem}>
+                            <View style={styles.breakdownHeader}>
+                              <View style={styles.breakdownLabelContainer}>
+                                <Ionicons name="people" size={18} color={theme.colors.primary} />
+                                <Text style={styles.breakdownLabel}>Lotação</Text>
+                              </View>
+                              <Text style={styles.breakdownScore}>
+                                {conditions.icp_breakdown.crowd.score.toFixed(0)}
+                              </Text>
+                            </View>
+                            <View style={styles.breakdownBarContainer}>
+                              <View 
+                                style={[
+                                  styles.breakdownBar, 
+                                  { 
+                                    width: `${conditions.icp_breakdown.crowd.score}%`,
+                                    backgroundColor: conditions.icp_breakdown.crowd.score >= 80 ? theme.colors.success : 
+                                                   conditions.icp_breakdown.crowd.score >= 60 ? theme.colors.info : 
+                                                   theme.colors.warning
+                                  }
+                                ]} 
+                              />
+                            </View>
+                          </View>
+                        )}
                       </View>
-                      <Text style={styles.breakdownScore}>
-                        {conditions.icp_breakdown.crowd.score.toFixed(0)}
-                      </Text>
-                    </View>
-                    <View style={styles.breakdownBarContainer}>
-                      <View 
-                        style={[
-                          styles.breakdownBar, 
-                          { 
-                            width: `${conditions.icp_breakdown.crowd.score}%`,
-                            backgroundColor: conditions.icp_breakdown.crowd.score >= 80 ? theme.colors.success : 
-                                           conditions.icp_breakdown.crowd.score >= 60 ? theme.colors.info : 
-                                           theme.colors.warning
-                          }
-                        ]} 
-                      />
-                    </View>
-                  </View>
-                )}
+                    </Card>
+                  </ScrollView>
+                </View>
               </View>
-            </Card>
+            </Modal>
           )}
 
           {/* Quick Info Cards */}
@@ -535,21 +659,38 @@ export default function BeachDetailScreen({ route, navigation }: any) {
             )}
           </View>
 
+          {/* Crowd Level - mostra sempre, mas deixa claro que é estimativa */}
+          {crowdData && crowdData.confidence_score > 0 && (
+            <Card style={styles.section}>
+              <View style={styles.crowdHeader}>
+                <Text style={styles.sectionTitle}>Lotação</Text>
+                <TouchableOpacity
+                  style={styles.estimativeBadge}
+                  onPress={() =>
+                    Alert.alert(
+                      'Estimativa de lotação',
+                      'Atualizado ' + getTimeAgo(crowdData.last_updated || crowdData.calculated_at) + '\n\n' +
+                        'Esta estimativa é calculada com base em fontes como check-ins, fluxo de trânsito e padrões históricos. Pode não refletir a lotação real no momento.'
+                    )
+                  }
+                >
+                  <Ionicons name="information-circle-outline" size={14} color={theme.colors.textSecondary} />
+                  <Text style={styles.estimativeText}>Estimativa</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.crowdContainer}>
+                <CrowdBadge 
+                  level={crowdData.crowd_level} 
+                  size="large" 
+                  showLabel={true}
+                />
+              </View>
+            </Card>
+          )}
+
           {/* Action Buttons */}
           <View style={styles.actions}>
-            <Button
-              title="Fazer Check-in"
-              onPress={() => navigation.navigate('CheckIn', { beachId })}
-              fullWidth
-            />
-            
-            <View style={styles.secondaryActions}>
-              <Button
-                title={isFavorite(beachId) ? 'Remover' : 'Favoritar'}
-                variant="outline"
-                onPress={handleToggleFavorite}
-                style={{ flex: 1 }}
-              />
+            <View style={styles.secondaryActionsSingle}>
               <Button
                 title="Ver no Mapa"
                 variant="outline"
@@ -604,48 +745,7 @@ export default function BeachDetailScreen({ route, navigation }: any) {
             </View>
           </Card>
 
-          {/* Crowd Level - mostra sempre, mas deixa claro que é estimativa */}
-          {crowdData && crowdData.confidence_score > 0 && (
-            <Card style={styles.section}>
-              <View style={styles.crowdHeader}>
-                <Text style={styles.sectionTitle}>Estimativa de Lotação</Text>
-                <View style={styles.estimativeBadge}>
-                  <Ionicons name="information-circle-outline" size={14} color={theme.colors.textSecondary} />
-                  <Text style={styles.estimativeText}>Estimativa</Text>
-                </View>
-              </View>
-              <View style={styles.crowdContainer}>
-                <CrowdBadge 
-                  level={crowdData.crowd_level} 
-                  size="large" 
-                  showLabel={true}
-                />
-                <View style={styles.crowdDetails}>
-                  {crowdData.data_sources[0] === 'checkins' && (
-                    <Text style={styles.crowdDetailText}>
-                      📍 Baseado em visitantes recentes
-                    </Text>
-                  )}
-                  {crowdData.data_sources[0] === 'traffic' && (
-                    <Text style={styles.crowdDetailText}>
-                      🚗 Baseado em fluxo de trânsito
-                    </Text>
-                  )}
-                  {crowdData.data_sources[0] === 'estimated' && (
-                    <Text style={styles.crowdDetailText}>
-                      📊 Baseado em padrões de horário
-                    </Text>
-                  )}
-                  <Text style={styles.crowdDetailText}>
-                    Atualizado {getTimeAgo(crowdData.last_updated || crowdData.calculated_at)}
-                  </Text>
-                  <Text style={styles.crowdDisclaimerText}>
-                    Esta é uma estimativa. A lotação real pode variar.
-                  </Text>
-                </View>
-              </View>
-            </Card>
-          )}
+          {/* Nearby Partners */}
 
           {/* Nearby Partners */}
           {partners.length > 0 && (
@@ -711,6 +811,7 @@ const styles = StyleSheet.create({
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.textInverse,
     marginBottom: theme.spacing.xs,
+    flexShrink: 1,
   },
   locationContainer: {
     flexDirection: 'row',
@@ -770,6 +871,10 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     marginTop: theme.spacing.sm,
   },
+  secondaryActionsSingle: {
+    flexDirection: 'row',
+    marginTop: theme.spacing.sm,
+  },
   section: {
     marginBottom: theme.spacing.md,
   },
@@ -777,6 +882,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   },
   sectionTitle: {
@@ -872,6 +983,42 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverse,
     textAlign: 'center',
     opacity: 0.9,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  favoriteButton: {
+    padding: 6,
+    borderRadius: theme.borderRadius.full,
+  },
+  headerActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    flexShrink: 0,
+  },
+  navigationActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+    justifyContent: 'flex-start',
+  },
+  headerCheckinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.textInverse,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: theme.borderRadius.full,
+    gap: 6,
+  },
+  headerCheckinText: {
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
+    fontSize: theme.fontSize.sm,
   },
   // Estilos para Condições Grid
   conditionsGrid: {
@@ -996,6 +1143,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
+  icpHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   breakdownLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1034,11 +1185,13 @@ const styles = StyleSheet.create({
   estimativeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#f5f5f5',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    gap: 6,
+    backgroundColor: theme.colors.surface,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: theme.borderRadius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
   },
   estimativeText: {
     fontSize: theme.fontSize.xs,
@@ -1074,5 +1227,25 @@ const styles = StyleSheet.create({
   breakdownBar: {
     height: '100%',
     borderRadius: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.md,
+    maxHeight: '85%',
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderLight,
   },
 });

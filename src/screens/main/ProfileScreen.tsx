@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -13,14 +14,17 @@ import api from '../../services/api';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { theme } from '../../theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, signOut, updateUser } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     loadStats();
+    loadNotificationsPref();
   }, []);
 
   const loadStats = async () => {
@@ -29,6 +33,45 @@ export default function ProfileScreen({ navigation }: any) {
       setStats(response);
     } catch (error) {
       console.error('Error loading stats:', error);
+      // Mostra mensagem amigável ao usuário e define valores padrão
+      Alert.alert('Erro', 'Não foi possível carregar suas estatísticas no momento. Tente novamente mais tarde.');
+      setStats({ total_checkins: 0, total_favorites: 0, unique_beaches_visited: 0 });
+    }
+  };
+
+  const loadNotificationsPref = async () => {
+    try {
+      const v = await AsyncStorage.getItem('notifications_enabled');
+      setNotificationsEnabled(v === 'true');
+    } catch (e) {
+      console.error('Erro lendo preferencia de notificacoes', e);
+      setNotificationsEnabled(false);
+    }
+  };
+
+  const toggleNotifications = async (value: boolean) => {
+    try {
+      setNotificationsEnabled(value);
+      await AsyncStorage.setItem('notifications_enabled', value ? 'true' : 'false');
+
+      if (value) {
+        // If an FCM token is present, register it on server
+        const token = await AsyncStorage.getItem('fcm_token');
+        if (token) {
+          try {
+            await api.registerFCMToken(token);
+          } catch (e) {
+            console.warn('Erro registrando token FCM', e);
+          }
+        } else {
+          Alert.alert('Notificações', 'Ativado. Para receber push, permita notificações no sistema e reinicie o app.');
+        }
+      } else {
+        // Disabled: we keep server state as-is (no explicit unregister endpoint)
+        Alert.alert('Notificações', 'Notificações desativadas localmente.');
+      }
+    } catch (e) {
+      console.error('Erro salvando preferencia de notificacoes', e);
     }
   };
 
@@ -88,7 +131,7 @@ export default function ProfileScreen({ navigation }: any) {
             </Card>
 
             <Card style={styles.statCard} variant="outlined">
-              <Ionicons name="beach" size={32} color={theme.colors.secondary} />
+              <Ionicons name="map" size={32} color={theme.colors.secondary} />
               <Text style={styles.statValue}>{stats.unique_beaches_visited || 0}</Text>
               <Text style={styles.statLabel}>Praias Visitadas</Text>
             </Card>
@@ -100,7 +143,7 @@ export default function ProfileScreen({ navigation }: any) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Configurações</Text>
         
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('EditProfile')}>
           <View style={styles.menuItemLeft}>
             <Ionicons name="person-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuItemText}>Editar Perfil</Text>
@@ -108,15 +151,19 @@ export default function ProfileScreen({ navigation }: any) {
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <View style={styles.menuItem}>
           <View style={styles.menuItemLeft}>
             <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuItemText}>Notificações</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
-        </TouchableOpacity>
+          <Switch
+            value={!!notificationsEnabled}
+            onValueChange={toggleNotifications}
+            thumbColor={notificationsEnabled ? theme.colors.primary : undefined}
+          />
+        </View>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Privacy')}>
           <View style={styles.menuItemLeft}>
             <Ionicons name="shield-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuItemText}>Privacidade</Text>

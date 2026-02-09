@@ -17,7 +17,7 @@ interface ButtonProps extends TouchableOpacityProps {
   fullWidth?: boolean;
 }
 
-const Button = forwardRef<TouchableOpacity, ButtonProps>(
+const Button = forwardRef<any, ButtonProps>(
   (
     {
       title,
