@@ -219,8 +219,13 @@ class ApiService {
   }
 
   async getUserStats() {
-    const response = await this.api.get('/api/v1/users/me/checkins/summary');
-    return response.data;
+    try {
+      const response = await this.api.get('/api/v1/users/me/checkins/summary');
+      return response.data;
+    } catch (error) {
+      console.warn('getUserStats failed, returning fallback stats', error);
+      return { total_checkins: 0, total_favorites: 0, unique_beaches_visited: 0 };
+    }
   }
 
   // OAuth login helper
