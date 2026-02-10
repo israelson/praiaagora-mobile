@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFavorites } from '../../contexts/FavoritesContext';
 import api from '../../services/api';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -21,11 +22,21 @@ export default function ProfileScreen({ navigation }: any) {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean | null>(null);
+  const { favorites, loadFavorites } = useFavorites();
 
   useEffect(() => {
     loadStats();
     loadNotificationsPref();
+    // ensure favorites are loaded from API/cache
+    loadFavorites().catch(() => {});
   }, []);
+
+  // Keep stats.total_favorites in sync with local favorites cache
+  useEffect(() => {
+    if (stats) {
+      setStats((s: any) => ({ ...s, total_favorites: favorites.length }));
+    }
+  }, [favorites]);
 
   const loadStats = async () => {
     try {
