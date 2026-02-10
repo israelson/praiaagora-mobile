@@ -31,6 +31,44 @@ export default function ProfileScreen({ navigation }: any) {
     loadFavorites().catch(() => {});
   }, []);
 
+  // Load local check-ins saved in AsyncStorage (keys like last_checkin:{beachId})
+  useEffect(() => {
+    const loadLocalCheckins = async () => {
+      try {
+        const keys = await AsyncStorage.getAllKeys();
+        const checkinKeys = keys.filter((k) => k.startsWith('last_checkin:'));
+        if (checkinKeys.length === 0) {
+          // ensure stats reflect zero if server returned null
+          if (stats) {
+            setStats((s: any) => ({ ...s, total_checkins: s.total_checkins || 0, unique_beaches_visited: s.unique_beaches_visited || 0 }));
+          }
+          return;
+        }
+
+        const values = await AsyncStorage.multiGet(checkinKeys);
+        const parsed = values.map(([, v]) => {
+          try { return JSON.parse(v || '{}'); } catch { return {} }
+        }).filter((p) => p && p.date);
+
+        const uniqueBeaches = parsed.length; // one per beach in this storage scheme
+        const totalCheckinsLocal = parsed.length;
+
+        // Merge with server stats if present
+        setStats((prev: any) => {
+          const base = prev || { total_checkins: 0, total_favorites: 0, unique_beaches_visited: 0 };
+          return {
+            ...base,
+            total_checkins: Math.max(base.total_checkins || 0, totalCheckinsLocal),
+            unique_beaches_visited: Math.max(base.unique_beaches_visited || 0, uniqueBeaches),
+          };
+        });
+      } catch (e) {
+        console.error('Error loading local checkins for stats', e);
+      }
+    };
+    loadLocalCheckins();
+  }, []);
+
   // Keep stats.total_favorites in sync with local favorites cache
   useEffect(() => {
     if (stats) {
