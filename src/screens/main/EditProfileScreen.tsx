@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, Image } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, Alert, TouchableOpacity, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Input from '../../components/ui/Input';
@@ -72,7 +72,7 @@ export default function EditProfileScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.form}>
         <TouchableOpacity style={styles.avatarPicker} onPress={pickAvatar}>
           {avatarUri ? (
@@ -95,12 +95,32 @@ export default function EditProfileScreen({ navigation }: any) {
 
         <Button title="Salvar" onPress={handleSave} loading={loading} fullWidth />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing.md },
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  contentContainer: { padding: theme.spacing.md },
   form: { gap: theme.spacing.md },
   label: { color: theme.colors.textSecondary, marginBottom: 6 },
+  avatarPicker: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    overflow: 'hidden',
+    alignSelf: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  avatarPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+  },
 });
