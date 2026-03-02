@@ -78,12 +78,15 @@ export default function ProfileScreen({ navigation }: any) {
 
   const loadStats = async () => {
     try {
+      const token = await AsyncStorage.getItem('access_token');
+      if (!token) {
+        setStats({ total_checkins: 0, total_favorites: 0, unique_beaches_visited: 0 });
+        return;
+      }
       const response = await api.getUserStats();
       setStats(response);
     } catch (error) {
       console.error('Error loading stats:', error);
-      // Mostra mensagem amigável ao usuário e define valores padrão
-      Alert.alert('Erro', 'Não foi possível carregar suas estatísticas no momento. Tente novamente mais tarde.');
       setStats({ total_checkins: 0, total_favorites: 0, unique_beaches_visited: 0 });
     }
   };
@@ -248,7 +251,7 @@ export default function ProfileScreen({ navigation }: any) {
       </View>
 
       <View style={styles.version}>
-        <Text style={styles.versionText}>PraiaAgora v1.0.0</Text>
+        <Text style={styles.versionText}>Beachly v1.0.0</Text>
       </View>
     </ScrollView>
   );

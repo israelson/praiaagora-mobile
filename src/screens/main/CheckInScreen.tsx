@@ -130,7 +130,7 @@ export default function CheckInScreen({ route, navigation }: any) {
       await AsyncStorage.setItem(`last_checkin:${beachId}`, JSON.stringify({ level, date: today }));
       setLocked(true);
 
-      Alert.alert('Check-in Realizado!', 'Obrigado por contribuir com a comunidade PraiaAgora 🌊');
+      Alert.alert('Check-in Realizado!', 'Obrigado por contribuir com a comunidade Beachly 🌊');
       navigation.goBack();
     } catch (error: any) {
       const errorMessage = typeof error.response?.data?.detail === 'string'

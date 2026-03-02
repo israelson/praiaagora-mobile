@@ -1,6 +1,6 @@
-# 🌊 PraiaAgora Mobile App
+# 🌊 Beachly Mobile App
 
-Aplicativo mobile moderno e elegante para o sistema PraiaAgora - encontre as melhores praias de Santa Catarina em tempo real.
+Aplicativo mobile moderno e elegante para o sistema Beachly - encontre as melhores praias de Santa Catarina em tempo real.
 
 ## ✨ Características
 
@@ -100,7 +100,7 @@ Aplicativo mobile moderno e elegante para o sistema PraiaAgora - encontre as mel
 │                     │  │                     │  │                     │
 │      🌊 Login       │  │    🏠 Início       │  │   🔍 Explorar      │
 │                     │  │                     │  │                     │
-│   PraiaAgora        │  │  Olá, João! 👋     │  │  [Buscar...]       │
+│   Beachly           │  │  Olá, João! 👋     │  │  [Buscar...]       │
 │                     │  │                     │  │                     │
 │   [Email]           │  │  ┌───┬───┬───┐     │  │  🏖️ Praia 1        │
 │   [Senha]           │  │  │ 🗺│ 🔍│ ❤│     │  │  🏖️ Praia 2        │
@@ -445,14 +445,14 @@ Este projeto está sob a licença MIT.
 
 ## 👥 Equipe
 
-Desenvolvido com ❤️ pela equipe PraiaAgora
+Desenvolvido com ❤️ pela equipe Beachly
 
 ## 📞 Suporte
 
-- Email: suporte@praiaagora.com.br
-- Website: https://praiaagora.com.br
-- Discord: https://discord.gg/praiaagora
+- Email: suporte@beachly.com.br
+- Website: https://beachly.com.br
+- Discord: https://discord.gg/beachly
 
 ---
 
-**🌊 PraiaAgora - Encontre a praia perfeita! 🏖️**
+**🌊 Beachly - Encontre a praia perfeita! 🏖️**

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 
 interface SocialLoginButtonProps {
-  provider: 'google' | 'facebook';
+  provider: 'google';
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
@@ -23,13 +23,6 @@ export default function SocialLoginButton({
       bgColor: '#FFFFFF',
       textColor: '#1F2937',
       borderColor: '#E5E7EB',
-    },
-    facebook: {
-      icon: 'logo-facebook' as const,
-      label: 'Continuar com Facebook',
-      bgColor: '#1877F2',
-      textColor: '#FFFFFF',
-      borderColor: '#1877F2',
     },
   };
 

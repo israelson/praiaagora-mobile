@@ -82,8 +82,16 @@ class ApiService {
   }
 
   async logout() {
-    const response = await this.api.post('/api/v1/auth/logout');
-    return response.data;
+    try {
+      const response = await this.api.post('/api/v1/auth/logout');
+      return response.data;
+    } catch (error: any) {
+      // Silently ignore 404 (endpoint may not exist) and other errors —
+      // tokens are always cleared locally regardless.
+      if (error.response?.status !== 404) {
+        console.warn('logout endpoint error (ignored):', error.response?.status);
+      }
+    }
   }
 
   // Beach endpoints
@@ -143,8 +151,21 @@ class ApiService {
   }
 
   async getMyCheckIns() {
-    const response = await this.api.get('/api/v1/checkins/me');
-    return response.data;
+    try {
+      const response = await this.api.get('/api/v1/checkins/me');
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        // Try alternative route used by some backends
+        try {
+          const resp = await this.api.get('/api/v1/users/me/checkins');
+          return resp.data;
+        } catch (e) {
+          return [];
+        }
+      }
+      throw error;
+    }
   }
 
   // Favorites endpoints
@@ -199,8 +220,13 @@ class ApiService {
       params.lon = longitude;
       params.radius = radius_km;
     }
-    const response = await this.api.get('/api/v1/analytics/beaches/recommend', { params });
-    return response.data;
+    try {
+      const response = await this.api.get('/api/v1/analytics/beaches/recommend', { params });
+      return response.data;
+    } catch (error: any) {
+      console.warn('getRecommendations failed, returning empty:', error.message);
+      return { recommendations: [] };
+    }
   }
 
   // User profile endpoints

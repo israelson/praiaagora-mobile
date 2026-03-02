@@ -9,7 +9,7 @@ export default function PrivacyScreen() {
       <Card style={styles.card}>
         <Text style={styles.title}>Privacidade</Text>
         <Text style={styles.paragraph}>
-          Este é um espaço para explicar como o PraiaAgora trata seus dados. Dados de localização
+          Este é um espaço para explicar como o Beachly trata seus dados. Dados de localização
           e check-ins são usados para estimativas de lotação e não são compartilhados publicamente
           com informações pessoais.
         </Text>

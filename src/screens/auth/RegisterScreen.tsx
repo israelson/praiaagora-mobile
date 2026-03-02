@@ -19,9 +19,7 @@ import SocialLoginButton from '../../components/auth/SocialLoginButton';
 import { theme } from '../../theme';
 import {
   useGoogleAuth,
-  useFacebookAuth,
   handleGoogleResponse,
-  handleFacebookResponse,
 } from '../../services/oauth';
 
 export default function RegisterScreen({ navigation }: any) {
@@ -33,7 +31,6 @@ export default function RegisterScreen({ navigation }: any) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [facebookLoading, setFacebookLoading] = useState(false);
 
   // OAuth hooks
   const {
@@ -42,25 +39,12 @@ export default function RegisterScreen({ navigation }: any) {
     promptAsync: promptGoogleAsync,
   } = useGoogleAuth();
 
-  const {
-    request: facebookRequest,
-    response: facebookResponse,
-    promptAsync: promptFacebookAsync,
-  } = useFacebookAuth();
-
   // Handle Google response
   useEffect(() => {
     if (googleResponse) {
       handleGoogleSignup();
     }
   }, [googleResponse]);
-
-  // Handle Facebook response
-  useEffect(() => {
-    if (facebookResponse) {
-      handleFacebookSignup();
-    }
-  }, [facebookResponse]);
 
   const handleGoogleSignup = async () => {
     setGoogleLoading(true);
@@ -78,25 +62,6 @@ export default function RegisterScreen({ navigation }: any) {
       );
     } finally {
       setGoogleLoading(false);
-    }
-  };
-
-  const handleFacebookSignup = async () => {
-    setFacebookLoading(true);
-    try {
-      const result = await handleFacebookResponse(facebookResponse);
-      if (result) {
-        await AsyncStorage.setItem('access_token', result.access_token);
-        await AsyncStorage.setItem('refresh_token', result.refresh_token);
-        Alert.alert('Sucesso', 'Cadastro com Facebook realizado!');
-      }
-    } catch (error: any) {
-      Alert.alert(
-        'Erro no cadastro com Facebook',
-        error.response?.data?.detail || 'Tente novamente'
-      );
-    } finally {
-      setFacebookLoading(false);
     }
   };
 
@@ -168,7 +133,7 @@ export default function RegisterScreen({ navigation }: any) {
             <Ionicons name="person-add" size={60} color={theme.colors.textInverse} />
             <Text style={styles.title}>Criar Conta</Text>
             <Text style={styles.subtitle}>
-              Junte-se à comunidade PraiaAgora
+              Junte-se à comunidade Beachly
             </Text>
           </View>
 
@@ -177,15 +142,8 @@ export default function RegisterScreen({ navigation }: any) {
             <SocialLoginButton
               provider="google"
               onPress={() => promptGoogleAsync()}
-              disabled={!googleRequest || googleLoading || facebookLoading}
+              disabled={!googleRequest || googleLoading}
               loading={googleLoading}
-            />
-
-            <SocialLoginButton
-              provider="facebook"
-              onPress={() => promptFacebookAsync()}
-              disabled={!facebookRequest || googleLoading || facebookLoading}
-              loading={facebookLoading}
             />
 
             {/* Divider */}

@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "PraiaAgora",
-    "slug": "praiaagora-mobile",
-    "scheme": "praiaagora",
+    "name": "Beachly",
+    "slug": "beachly-mobile",
+    "scheme": "beachly",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -15,17 +15,17 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.praiaagora.app",
+      "bundleIdentifier": "com.beachly.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "PraiaAgora precisa da sua localização para mostrar praias próximas",
-        "NSLocationAlwaysUsageDescription": "PraiaAgora precisa da sua localização para enviar notificações sobre praias favoritas"
+        "NSLocationWhenInUseUsageDescription": "Beachly precisa da sua localização para mostrar praias próximas",
+        "NSLocationAlwaysUsageDescription": "Beachly precisa da sua localização para enviar notificações sobre praias favoritas"
       },
       "config": {
         "googleMapsApiKey": "AIzaSyDavvE9VitYMiWJj5rN7x_KTzRQuTjuOlc"
       }
     },
     "android": {
-      "package": "com.praiaagora.app",
+      "package": "com.beachly.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"

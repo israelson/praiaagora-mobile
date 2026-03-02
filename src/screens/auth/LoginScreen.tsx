@@ -18,9 +18,7 @@ import SocialLoginButton from '../../components/auth/SocialLoginButton';
 import { theme } from '../../theme';
 import {
   useGoogleAuth,
-  useFacebookAuth,
   handleGoogleResponse,
-  handleFacebookResponse,
 } from '../../services/oauth';
 
 export default function LoginScreen({ navigation }: any) {
@@ -30,7 +28,6 @@ export default function LoginScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [facebookLoading, setFacebookLoading] = useState(false);
 
   // OAuth hooks
   const {
@@ -39,25 +36,12 @@ export default function LoginScreen({ navigation }: any) {
     promptAsync: promptGoogleAsync,
   } = useGoogleAuth();
 
-  const {
-    request: facebookRequest,
-    response: facebookResponse,
-    promptAsync: promptFacebookAsync,
-  } = useFacebookAuth();
-
   // Handle Google response
   useEffect(() => {
     if (googleResponse) {
       handleGoogleLogin();
     }
   }, [googleResponse]);
-
-  // Handle Facebook response
-  useEffect(() => {
-    if (facebookResponse) {
-      handleFacebookLogin();
-    }
-  }, [facebookResponse]);
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
@@ -77,25 +61,6 @@ export default function LoginScreen({ navigation }: any) {
       );
     } finally {
       setGoogleLoading(false);
-    }
-  };
-
-  const handleFacebookLogin = async () => {
-    setFacebookLoading(true);
-    try {
-      const result = await handleFacebookResponse(facebookResponse);
-      if (result) {
-        await AsyncStorage.setItem('access_token', result.access_token);
-        await AsyncStorage.setItem('refresh_token', result.refresh_token);
-        Alert.alert('Sucesso', 'Login com Facebook realizado!');
-      }
-    } catch (error: any) {
-      Alert.alert(
-        'Erro no login com Facebook',
-        error.response?.data?.detail || 'Tente novamente'
-      );
-    } finally {
-      setFacebookLoading(false);
     }
   };
 
@@ -139,7 +104,7 @@ export default function LoginScreen({ navigation }: any) {
         >
           <View style={styles.header}>
             <Ionicons name="water" size={80} color={theme.colors.textInverse} />
-            <Text style={styles.title}>PraiaAgora</Text>
+            <Text style={styles.title}>Beachly</Text>
             <Text style={styles.subtitle}>
               Encontre as melhores praias de Santa Catarina
             </Text>
@@ -150,15 +115,8 @@ export default function LoginScreen({ navigation }: any) {
             <SocialLoginButton
               provider="google"
               onPress={() => promptGoogleAsync()}
-              disabled={!googleRequest || googleLoading || facebookLoading}
+              disabled={!googleRequest || googleLoading}
               loading={googleLoading}
-            />
-
-            <SocialLoginButton
-              provider="facebook"
-              onPress={() => promptFacebookAsync()}
-              disabled={!facebookRequest || googleLoading || facebookLoading}
-              loading={facebookLoading}
             />
 
             {/* Divider */}

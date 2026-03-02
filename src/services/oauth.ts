@@ -1,19 +1,29 @@
 /**
- * Serviço de autenticação OAuth (Google, Facebook)
+ * Serviço de autenticação OAuth (Google)
  */
 
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import * as Facebook from 'expo-auth-session/providers/facebook';
 import { makeRedirectUri } from 'expo-auth-session';
 import api from './api';
 
 // Necessário para fechar o browser após autenticação
 WebBrowser.maybeCompleteAuthSession();
 
-// IDs dos apps OAuth (vão no app.json ou como variáveis de ambiente)
-const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
-const FACEBOOK_APP_ID = 'YOUR_FACEBOOK_APP_ID';
+// IDs dos apps OAuth — lidos de variáveis EXPO_PUBLIC_ no arquivo .env
+// Consulte .env na raiz do projeto para saber quais valores preencher.
+const GOOGLE_WEB_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID     ?? '';
+const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
+const GOOGLE_IOS_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID     ?? '';
+
+// URI de redirecionamento — deve estar cadastrada no Google Cloud Console
+// Verifique o log do Metro: "Google redirectUri:" para saber qual adicionar.
+const REDIRECT_URI = makeRedirectUri({
+  scheme: 'com.beachly.app',
+  path: 'oauth2redirect/google',
+});
+
+console.log('[OAuth] Google redirectUri:', REDIRECT_URI);
 
 export interface OAuthLoginResponse {
   access_token: string;
@@ -27,24 +37,11 @@ export interface OAuthLoginResponse {
  */
 export const useGoogleAuth = () => {
   const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: GOOGLE_CLIENT_ID,
-    iosClientId: GOOGLE_CLIENT_ID,
-    androidClientId: GOOGLE_CLIENT_ID,
-    webClientId: GOOGLE_CLIENT_ID,
-  });
-
-  return { request, response, promptAsync };
-};
-
-/**
- * Hook para login com Facebook
- */
-export const useFacebookAuth = () => {
-  const [request, response, promptAsync] = Facebook.useAuthRequest({
-    clientId: FACEBOOK_APP_ID,
-    redirectUri: makeRedirectUri({
-      scheme: 'praiaagora'
-    }),
+    clientId: GOOGLE_WEB_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    redirectUri: REDIRECT_URI,
   });
 
   return { request, response, promptAsync };
@@ -54,7 +51,8 @@ export const useFacebookAuth = () => {
  * Envia o token OAuth para o backend e obtém nossos tokens JWT
  */
 export const loginWithOAuth = async (
-  provider: 'google' | 'facebook',
+  provider: 'google',
+
   accessToken: string
 ): Promise<OAuthLoginResponse> => {
   try {
@@ -81,17 +79,3 @@ export const handleGoogleResponse = async (
   return null;
 };
 
-/**
- * Processa a resposta do Facebook e faz login no backend
- */
-export const handleFacebookResponse = async (
-  response: any
-): Promise<OAuthLoginResponse | null> => {
-  if (response?.type === 'success') {
-    const { authentication } = response;
-    if (authentication?.accessToken) {
-      return await loginWithOAuth('facebook', authentication.accessToken);
-    }
-  }
-  return null;
-};

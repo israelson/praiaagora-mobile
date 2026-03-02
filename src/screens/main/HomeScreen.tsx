@@ -64,9 +64,19 @@ export default function HomeScreen({ navigation }: any) {
   const loadData = async () => {
     setLoading(true);
     try {
+      // Pede permissão e localização uma única vez para evitar condição de corrida
+      const granted = await requestLocationPermission();
+      if (!granted) {
+        console.log('Location permission not granted');
+        setLoading(false);
+        return;
+      }
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      setLocation(currentLocation.coords);
+
       await Promise.all([
-        loadNearbyBeaches(),
-        loadRecommendations(),
+        loadNearbyBeaches(currentLocation.coords),
+        loadRecommendations(currentLocation.coords),
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -75,22 +85,11 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
-  const loadNearbyBeaches = async () => {
+  const loadNearbyBeaches = async (coords: { latitude: number; longitude: number }) => {
     try {
-      // Mostrar rationale antes do prompt nativo para evitar que o sistema
-      // apresente a caixa de diálogo inesperadamente logo após o login.
-      const granted = await requestLocationPermission();
-      if (!granted) {
-        console.log('Location permission not granted');
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      setLocation(location.coords);
-
       const response = await api.getNearbyBeaches(
-        location.coords.latitude,
-        location.coords.longitude,
+        coords.latitude,
+        coords.longitude,
         50
       );
       setNearbyBeaches(response.beaches.slice(0, 5));
@@ -99,22 +98,12 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
-  const loadRecommendations = async () => {
+  const loadRecommendations = async (coords: { latitude: number; longitude: number }) => {
     try {
-      // Mostrar rationale antes do prompt nativo
-      const granted = await requestLocationPermission();
-      if (!granted) {
-        console.log('Location permission not granted for recommendations');
-        return;
-      }
-
-      // Obter localização atual
-      const currentLocation = await Location.getCurrentPositionAsync({});
-      
       // Chamar API de recomendações com GPS
       const response = await api.getRecommendations(
-        currentLocation.coords.latitude,
-        currentLocation.coords.longitude,
+        coords.latitude,
+        coords.longitude,
         30 // raio de 30km
       );
       

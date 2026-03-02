@@ -2,6 +2,11 @@ import React, { createContext, useState, useContext, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
 
+const hasToken = async () => {
+  const t = await AsyncStorage.getItem('access_token');
+  return !!t;
+};
+
 interface FavoritesContextData {
   favorites: string[];
   loading: boolean;
@@ -33,6 +38,14 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
   }
 
   async function loadFavorites() {
+    // Sem token não faz sentido chamar a API - usa cache local
+    if (!(await hasToken())) {
+      try {
+        const cached = await AsyncStorage.getItem('favorites');
+        if (cached) setFavorites(JSON.parse(cached));
+      } catch {}
+      return;
+    }
     setLoading(true);
     try {
       const response = await api.getFavorites();
@@ -40,16 +53,11 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
       setFavorites(beachIds);
       await AsyncStorage.setItem('favorites', JSON.stringify(beachIds));
     } catch (error: any) {
-      console.error('Error loading favorites from API:', error);
-      // Se falhar, mantém os favoritos do cache local
+      // Silently fall back to local cache to avoid console noise on unauthenticated loads
       try {
         const cached = await AsyncStorage.getItem('favorites');
-        if (cached) {
-          setFavorites(JSON.parse(cached));
-        }
-      } catch (cacheError) {
-        console.error('Error loading favorites from cache:', cacheError);
-      }
+        if (cached) setFavorites(JSON.parse(cached));
+      } catch {}
     } finally {
       setLoading(false);
     }
@@ -60,6 +68,9 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
   }
 
   async function addFavorite(beachId: string) {
+    if (!(await hasToken())) {
+      throw new Error('Faça login para adicionar favoritos');
+    }
     try {
       await api.addFavorite(beachId);
       const updated = [...favorites, beachId];
@@ -72,6 +83,9 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
   }
 
   async function removeFavorite(beachId: string) {
+    if (!(await hasToken())) {
+      throw new Error('Faça login para remover favoritos');
+    }
     try {
       await api.removeFavorite(beachId);
       const updated = favorites.filter((id) => id !== beachId);
