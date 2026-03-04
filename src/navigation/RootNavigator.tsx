@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, ActivityIndicator, Animated, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -155,15 +156,52 @@ function MainStack() {
   );
 }
 
+function SplashScreen() {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, speed: 8, bounciness: 10, useNativeDriver: true }),
+    ]).start();
+  }, [fadeAnim, scaleAnim]);
+
+  return (
+    <LinearGradient colors={[theme.colors.primary, theme.colors.primaryDark]} style={splashStyles.container}>
+      <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
+        <Ionicons name="water" size={80} color={theme.colors.textInverse} />
+        <Text style={splashStyles.title}>Beachly</Text>
+        <Text style={splashStyles.subtitle}>Encontre a praia perfeita</Text>
+      </Animated.View>
+      <ActivityIndicator style={splashStyles.spinner} size="small" color={theme.colors.textInverse} />
+    </LinearGradient>
+  );
+}
+
+const splashStyles = StyleSheet.create({
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  title: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: theme.colors.textInverse,
+    marginTop: theme.spacing.md,
+    letterSpacing: 1,
+  },
+  subtitle: {
+    fontSize: theme.fontSize.md,
+    color: theme.colors.textInverse,
+    opacity: 0.85,
+    marginTop: theme.spacing.xs,
+  },
+  spinner: { position: 'absolute', bottom: 60 },
+});
+
 export default function RootNavigator() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.background }}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
+    return <SplashScreen />;
   }
 
   return user ? <MainStack /> : <AuthStack />;

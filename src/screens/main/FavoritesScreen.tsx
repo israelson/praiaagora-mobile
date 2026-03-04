@@ -6,11 +6,13 @@ import {
   FlatList,
   RefreshControl,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import api from '../../services/api';
 import BeachCard from '../../components/beach/BeachCard';
+import SkeletonBeachCard from '../../components/beach/SkeletonBeachCard';
 import { theme } from '../../theme';
 
 export default function FavoritesScreen({ navigation }: any) {
@@ -78,30 +80,49 @@ export default function FavoritesScreen({ navigation }: any) {
       <Text style={styles.emptySubtext}>
         Adicione praias aos favoritos para acessá-las rapidamente aqui
       </Text>
+      <TouchableOpacity
+        style={styles.emptyButton}
+        onPress={() => navigation.navigate('Explore')}
+      >
+        <Ionicons name="search" size={18} color={theme.colors.textInverse} />
+        <Text style={styles.emptyButtonText}>Explorar Praias</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderLoading = () => (
+    <View style={styles.skeletonContainer}>
+      {[1, 2, 3].map((i) => <SkeletonBeachCard key={i} />)}
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={favoriteBeaches}
-        renderItem={renderBeach}
-        keyExtractor={(item: any) => item.id.toString()}
-        ListEmptyComponent={!loading ? renderEmpty : null}
-        contentContainerStyle={[
-          styles.listContent,
-          favoriteBeaches.length === 0 && styles.emptyList,
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={() => {
-              loadFavorites();
-              loadFavoriteBeaches();
-            }}
-          />
-        }
-      />
+      {loading && favoriteBeaches.length === 0 ? (
+        renderLoading()
+      ) : (
+        <FlatList
+          data={favoriteBeaches}
+          renderItem={renderBeach}
+          keyExtractor={(item: any) => item.id.toString()}
+          ListEmptyComponent={!loading ? renderEmpty : null}
+          contentContainerStyle={[
+            styles.listContent,
+            favoriteBeaches.length === 0 && styles.emptyList,
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={() => {
+                loadFavorites();
+                loadFavoriteBeaches();
+              }}
+              tintColor={theme.colors.primary}
+              colors={[theme.colors.primary]}
+            />
+          }
+        />
+      )}
     </View>
   );
 }
@@ -136,5 +157,23 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
     textAlign: 'center',
     paddingHorizontal: theme.spacing.xl,
+  },
+  emptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.xl,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.full,
+  },
+  emptyButtonText: {
+    fontSize: theme.fontSize.md,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.textInverse,
+  },
+  skeletonContainer: {
+    padding: theme.spacing.md,
   },
 });
