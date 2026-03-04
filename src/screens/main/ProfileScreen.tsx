@@ -223,7 +223,16 @@ export default function ProfileScreen({ navigation }: any) {
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() =>
+            Alert.alert(
+              'Ajuda',
+              'Para suporte, envie um e-mail para suporte@beachly.app ou acesse nossa central de ajuda em beachly.app/ajuda.',
+              [{ text: 'OK' }]
+            )
+          }
+        >
           <View style={styles.menuItemLeft}>
             <Ionicons name="help-circle-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuItemText}>Ajuda</Text>
@@ -231,7 +240,16 @@ export default function ProfileScreen({ navigation }: any) {
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() =>
+            Alert.alert(
+              'Sobre o Beachly',
+              'Beachly v1.0.0\n\nO app que conecta você às melhores praias do Brasil com informações de qualidade da água, condições climáticas e lotação em tempo real.\n\n© 2026 Beachly. Todos os direitos reservados.',
+              [{ text: 'OK' }]
+            )
+          }
+        >
           <View style={styles.menuItemLeft}>
             <Ionicons name="information-circle-outline" size={24} color={theme.colors.text} />
             <Text style={styles.menuItemText}>Sobre</Text>

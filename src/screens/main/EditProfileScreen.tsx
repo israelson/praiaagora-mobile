@@ -63,8 +63,8 @@ export default function EditProfileScreen({ navigation }: any) {
         aspect: [1, 1],
       });
 
-      if (!result.cancelled) {
-        setAvatarUri(result.uri);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setAvatarUri(result.assets[0].uri);
       }
     } catch (e) {
       console.error('Erro escolhendo avatar', e);

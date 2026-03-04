@@ -101,7 +101,7 @@ export default function MapScreen({ route }: any) {
   return (
     <View style={styles.container}>
       <MapView
-        ref={(r) => (mapRef.current = r)}
+        ref={(r) => { mapRef.current = r; }}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={initialRegion}

@@ -1,8 +1,13 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// Configure base URL - Update this with your backend URL
-const API_BASE_URL = 'http://76.13.232.232:8000'; // VPS IP
+// Configure base URL: prefer app.json extra -> env var -> hardcoded fallback
+const manifest: any = (Constants && (Constants.manifest || (Constants as any).expoConfig)) || {};
+const API_BASE_URL =
+  manifest.extra?.API_BASE_URL ||
+  process.env.API_BASE_URL ||
+  'http://76.13.232.232:8000';
 
 class ApiService {
   private api: AxiosInstance;

@@ -2,6 +2,7 @@
   "expo": {
     "name": "Beachly",
     "slug": "beachly-mobile",
+    "owner": "israelsondias",
     "scheme": "beachly",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -26,6 +27,7 @@
     },
     "android": {
       "package": "com.beachly.app",
+      "usesCleartextTraffic": true,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
@@ -38,6 +40,12 @@
     },
     "plugins": [
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "API_BASE_URL": "http://76.13.232.232:8000",
+      "eas": {
+        "projectId": "9105dae8-c758-4b52-8250-cf5d0e0e3712"
+      }
+    }
   }
 }

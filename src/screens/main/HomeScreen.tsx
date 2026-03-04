@@ -92,7 +92,9 @@ export default function HomeScreen({ navigation }: any) {
         coords.longitude,
         50
       );
-      setNearbyBeaches(response.beaches.slice(0, 5));
+      // A API pode retornar array direto ou { beaches: [] }
+      const list = Array.isArray(response) ? response : response.beaches || [];
+      setNearbyBeaches(list.slice(0, 5));
     } catch (error) {
       console.error('Error loading nearby beaches:', error);
     }
