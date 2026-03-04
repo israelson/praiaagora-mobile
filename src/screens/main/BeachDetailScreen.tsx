@@ -148,7 +148,7 @@ export default function BeachDetailScreen({ route, navigation }: any) {
             <View style={styles.headerRight}>
               <TouchableOpacity
                 style={[styles.checkinButton, checkedInToday && { backgroundColor: theme.colors.success }]}
-                onPress={() => navigation.navigate('CheckIn', { beachId })}
+                onPress={() => navigation.navigate('CheckIn', { beachId, beachName: beach?.name })}
               >
                 <Ionicons
                   name="checkmark-done"

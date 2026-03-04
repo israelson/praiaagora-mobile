@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFavorites } from '../../contexts/FavoritesContext';
+import { useNotifications } from '../../contexts/NotificationsContext';
 import api from '../../services/api';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -19,14 +20,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, signOut, updateUser } = useAuth();
+  const { enabled: notificationsEnabled, dailyReminderEnabled, toggleNotifications, toggleDailyReminder } = useNotifications();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean | null>(null);
   const { favorites, loadFavorites } = useFavorites();
 
   useEffect(() => {
     loadStats();
-    loadNotificationsPref();
     // ensure favorites are loaded from API/cache
     loadFavorites().catch(() => {});
   }, []);
@@ -88,42 +88,6 @@ export default function ProfileScreen({ navigation }: any) {
     } catch (error) {
       console.error('Error loading stats:', error);
       setStats({ total_checkins: 0, total_favorites: 0, unique_beaches_visited: 0 });
-    }
-  };
-
-  const loadNotificationsPref = async () => {
-    try {
-      const v = await AsyncStorage.getItem('notifications_enabled');
-      setNotificationsEnabled(v === 'true');
-    } catch (e) {
-      console.error('Erro lendo preferencia de notificacoes', e);
-      setNotificationsEnabled(false);
-    }
-  };
-
-  const toggleNotifications = async (value: boolean) => {
-    try {
-      setNotificationsEnabled(value);
-      await AsyncStorage.setItem('notifications_enabled', value ? 'true' : 'false');
-
-      if (value) {
-        // If an FCM token is present, register it on server
-        const token = await AsyncStorage.getItem('fcm_token');
-        if (token) {
-          try {
-            await api.registerFCMToken(token);
-          } catch (e) {
-            console.warn('Erro registrando token FCM', e);
-          }
-        } else {
-          Alert.alert('Notificações', 'Ativado. Para receber push, permita notificações no sistema e reinicie o app.');
-        }
-      } else {
-        // Disabled: we keep server state as-is (no explicit unregister endpoint)
-        Alert.alert('Notificações', 'Notificações desativadas localmente.');
-      }
-    } catch (e) {
-      console.error('Erro salvando preferencia de notificacoes', e);
     }
   };
 
@@ -206,14 +170,38 @@ export default function ProfileScreen({ navigation }: any) {
         <View style={styles.menuItem}>
           <View style={styles.menuItemLeft}>
             <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
-            <Text style={styles.menuItemText}>Notificações</Text>
+            <View>
+              <Text style={styles.menuItemText}>Notificações Push</Text>
+              <Text style={styles.menuItemSub}>
+                {notificationsEnabled ? 'Ativas — toque para desativar' : 'Inativas'}
+              </Text>
+            </View>
           </View>
           <Switch
             value={!!notificationsEnabled}
             onValueChange={toggleNotifications}
             thumbColor={notificationsEnabled ? theme.colors.primary : undefined}
+            trackColor={{ true: `${theme.colors.primary}66`, false: undefined }}
           />
         </View>
+
+        {notificationsEnabled && (
+          <View style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="alarm-outline" size={24} color={theme.colors.text} />
+              <View>
+                <Text style={styles.menuItemText}>Lembrete Diário</Text>
+                <Text style={styles.menuItemSub}>Às 08:00 — resumo das praias</Text>
+              </View>
+            </View>
+            <Switch
+              value={!!dailyReminderEnabled}
+              onValueChange={toggleDailyReminder}
+              thumbColor={dailyReminderEnabled ? theme.colors.primary : undefined}
+              trackColor={{ true: `${theme.colors.primary}66`, false: undefined }}
+            />
+          </View>
+        )}
 
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Privacy')}>
           <View style={styles.menuItemLeft}>
@@ -361,6 +349,11 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: theme.fontSize.md,
     color: theme.colors.text,
+  },
+  menuItemSub: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   version: {
     alignItems: 'center',

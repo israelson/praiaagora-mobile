@@ -30,7 +30,10 @@
       "usesCleartextTraffic": true,
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "POST_NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
       ],
       "config": {
         "googleMaps": {
@@ -39,7 +42,15 @@
       }
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "color": "#0ea5e9",
+          "androidMode": "default",
+          "androidCollapsedTitle": "Beachly"
+        }
+      ]
     ],
     "extra": {
       "API_BASE_URL": "http://76.13.232.232:8000",
