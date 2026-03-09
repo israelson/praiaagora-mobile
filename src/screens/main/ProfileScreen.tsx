@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Switch,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -36,6 +37,14 @@ export default function ProfileScreen({ navigation }: any) {
   }, []);
 
   const handleClearNavPreference = () => {
+    if (Platform.OS === 'android') {
+      Alert.alert(
+        'App de Navegação',
+        'No Android, o sistema gerencia o app padrão automaticamente.\n\nQuando você tocar em "Como Chegar", o Android exibe todos os apps instalados e você pode escolher "Sempre" para definir o padrão.\n\nPara redefinir, vá em Configurações → Apps → Google Maps (ou Waze) → Abrir por padrão → Limpar padrões.',
+        [{ text: 'Entendi' }],
+      );
+      return;
+    }
     Alert.alert(
       'App de Navegação',
       `App padrão atual: ${savedNavApp ?? 'nenhum'}\n\nDeseja redefinir para perguntar novamente?`,
@@ -232,7 +241,9 @@ export default function ProfileScreen({ navigation }: any) {
             <View>
               <Text style={styles.menuItemText}>App de Navegação</Text>
               <Text style={styles.menuItemSub}>
-                {savedNavApp ? `Padrão: ${savedNavApp}` : 'Pergunta a cada vez'}
+                {Platform.OS === 'android'
+                  ? 'Gerenciado pelo sistema Android'
+                  : savedNavApp ? `Padrão: ${savedNavApp}` : 'Pergunta a cada vez'}
               </Text>
             </View>
           </View>

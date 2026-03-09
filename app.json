@@ -19,7 +19,15 @@
       "bundleIdentifier": "com.beachly.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Beachly precisa da sua localização para mostrar praias próximas",
-        "NSLocationAlwaysUsageDescription": "Beachly precisa da sua localização para enviar notificações sobre praias favoritas"
+        "NSLocationAlwaysUsageDescription": "Beachly precisa da sua localização para enviar notificações sobre praias favoritas",
+        "LSApplicationQueriesSchemes": [
+          "waze",
+          "comgooglemaps",
+          "maps",
+          "moovit",
+          "osmand.navigation",
+          "here-route"
+        ]
       },
       "config": {
         "googleMapsApiKey": "AIzaSyDavvE9VitYMiWJj5rN7x_KTzRQuTjuOlc"

@@ -3,120 +3,129 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PREF_KEY = '@beachly:nav_app_preference';
 
-/** Monta as URLs de navegação para um par de coordenadas. */
-function buildUrls(latitude: number, longitude: number) {
-  return {
-    waze: `waze://?ll=${latitude},${longitude}&navigate=yes`,
-    googleMaps: Platform.select({
-      ios: `comgooglemaps://?daddr=${latitude},${longitude}&directionsmode=driving`,
-      android: `google.navigation:q=${latitude},${longitude}`,
-    }) as string,
-    appleMaps: `http://maps.apple.com/?daddr=${latitude},${longitude}&dirflg=d`,
-    browser: `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`,
-  };
+// ─────────────────────────────────────────────────────────────────────────────
+// URLs por app (iOS usa schemes, Android usa intents nativos)
+// ─────────────────────────────────────────────────────────────────────────────
+interface NavApp {
+  id: string;
+  label: string;
+  urlAndroid: string;
+  urlIOS: string;
 }
 
-/** Abre o app preferido salvo, atualizando a URL com as novas coordenadas. */
-async function openPreferred(appId: string, latitude: number, longitude: number): Promise<boolean> {
-  const urls = buildUrls(latitude, longitude);
-  const map: Record<string, string> = {
-    waze: urls.waze,
-    googleMaps: urls.googleMaps,
-    appleMaps: urls.appleMaps,
-    browser: urls.browser,
-  };
+function getApps(lat: number, lon: number, name: string): NavApp[] {
+  const encoded = encodeURIComponent(name);
+  return [
+    {
+      id: 'waze',
+      label: 'Waze',
+      urlAndroid: `waze://?ll=${lat},${lon}&navigate=yes`,
+      urlIOS:     `waze://?ll=${lat},${lon}&navigate=yes`,
+    },
+    {
+      id: 'googleMaps',
+      label: 'Google Maps',
+      urlAndroid: `google.navigation:q=${lat},${lon}&mode=d`,
+      urlIOS:     `comgooglemaps://?daddr=${lat},${lon}&directionsmode=driving`,
+    },
+    {
+      id: 'moovit',
+      label: 'Moovit',
+      urlAndroid: `moovit://directions?dest_lat=${lat}&dest_lon=${lon}&dest_name=${encoded}`,
+      urlIOS:     `moovit://directions?dest_lat=${lat}&dest_lon=${lon}&dest_name=${encoded}`,
+    },
+    {
+      id: 'osmand',
+      label: 'OsmAnd',
+      urlAndroid: `osmand.navigation:q=${lat},${lon}`,
+      urlIOS:     `osmand-maps://navigate?lat=${lat}&lon=${lon}&z=15`,
+    },
+    {
+      id: 'here',
+      label: 'HERE Maps',
+      urlAndroid: `here-route://mylocation/${lat},${lon}/${encoded}`,
+      urlIOS:     `here-route://mylocation/${lat},${lon}/${encoded}`,
+    },
+    {
+      id: 'browser',
+      label: 'Google Maps (Navegador)',
+      urlAndroid: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`,
+      urlIOS:     `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`,
+    },
+  ];
+}
 
-  const url = map[appId];
-  if (!url) return false;
-
+// ─────────────────────────────────────────────────────────────────────────────
+// ANDROID: usa intent geo: — o sistema mostra TODOS os apps de navegação
+// instalados com o diálogo nativo "Abrir com... / Sempre / Uma vez"
+// ─────────────────────────────────────────────────────────────────────────────
+async function openAndroid(lat: number, lon: number, name: string) {
+  const encoded = encodeURIComponent(name);
+  // geo: intent dispara o seletor nativo do Android com todos os apps instalados
+  const geoUrl = `geo:${lat},${lon}?q=${lat},${lon}(${encoded})`;
   try {
-    // browser sempre pode abrir
-    if (appId === 'browser') {
-      await Linking.openURL(url);
-      return true;
-    }
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) {
-      await Linking.openURL(url);
-      return true;
-    }
-    // App preferido foi desinstalado — limpa preferência
-    await AsyncStorage.removeItem(PREF_KEY);
-    return false;
+    await Linking.openURL(geoUrl);
   } catch {
-    return false;
+    // Fallback: Google Maps no navegador
+    await Linking.openURL(
+      `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`,
+    );
   }
 }
 
-/**
- * Abre a navegação para a praia.
- * - Se o usuário já escolheu um app padrão, abre direto.
- * - Se não, exibe o menu, salva a preferência e abre.
- */
-export async function openNavigationWithChoice(
-  latitude: number,
-  longitude: number,
-  beachName?: string,
-) {
-  const urls = buildUrls(latitude, longitude);
+// ─────────────────────────────────────────────────────────────────────────────
+// iOS: testa cada scheme e exibe menu customizado; salva preferência
+// ─────────────────────────────────────────────────────────────────────────────
+async function openIOS(lat: number, lon: number, name: string) {
+  const apps = getApps(lat, lon, name);
 
-  // ── Verificar preferência salva ──────────────────────────────────
+  // Verificar preferência salva
   try {
     const saved = await AsyncStorage.getItem(PREF_KEY);
     if (saved) {
-      const opened = await openPreferred(saved, latitude, longitude);
-      if (opened) return;
-      // Preferência inválida/app desinstalado → cai no menu abaixo
+      const app = apps.find(a => a.id === saved);
+      if (app) {
+        const canOpen = app.id === 'browser'
+          ? true
+          : await Linking.canOpenURL(app.urlIOS);
+        if (canOpen) {
+          await Linking.openURL(app.urlIOS);
+          return;
+        }
+        // App desinstalado → limpa prefência
+        await AsyncStorage.removeItem(PREF_KEY);
+      }
     }
-  } catch {
-    // Ignora erro de leitura e cai no menu
-  }
+  } catch { /* ignora */ }
 
-  // ── Construir lista de apps disponíveis ──────────────────────────
-  const candidates: { id: string; label: string; url: string }[] = [];
-
-  try {
-    if (await Linking.canOpenURL(urls.waze)) {
-      candidates.push({ id: 'waze', label: 'Waze', url: urls.waze });
+  // Detectar apps disponíveis
+  const available: NavApp[] = [];
+  for (const app of apps) {
+    if (app.id === 'browser') {
+      available.push(app);
+      continue;
     }
-  } catch { /* ignore */ }
-
-  try {
-    if (urls.googleMaps && await Linking.canOpenURL(urls.googleMaps)) {
-      candidates.push({ id: 'googleMaps', label: 'Google Maps', url: urls.googleMaps });
-    }
-  } catch { /* ignore */ }
-
-  if (Platform.OS === 'ios') {
     try {
-      if (await Linking.canOpenURL(urls.appleMaps)) {
-        candidates.push({ id: 'appleMaps', label: 'Apple Maps', url: urls.appleMaps });
+      if (await Linking.canOpenURL(app.urlIOS)) {
+        available.push(app);
       }
     } catch { /* ignore */ }
   }
 
-  // Fallback navegador sempre disponível
-  candidates.push({ id: 'browser', label: 'Google Maps (Navegador)', url: urls.browser });
-
-  // Se apenas o fallback existir, abre direto sem menu
-  if (candidates.length === 1) {
-    await Linking.openURL(candidates[0].url);
+  if (available.length === 1) {
+    await Linking.openURL(available[0].urlIOS);
     return;
   }
 
-  // ── Exibir menu de escolha ────────────────────────────────────────
   Alert.alert(
     'Como Chegar',
-    `Para onde ir com ${beachName ?? 'a praia'}?\nEscolha seu app de navegação:`,
+    `Escolha o app de navegação para ${name}:`,
     [
-      ...candidates.map(app => ({
+      ...available.map(app => ({
         text: app.label,
         onPress: async () => {
-          // Salva preferência e abre
-          try {
-            await AsyncStorage.setItem(PREF_KEY, app.id);
-          } catch { /* ignore */ }
-          await Linking.openURL(app.url);
+          try { await AsyncStorage.setItem(PREF_KEY, app.id); } catch { /* ignore */ }
+          await Linking.openURL(app.urlIOS);
         },
       })),
       { text: 'Cancelar', style: 'cancel' },
@@ -124,22 +133,47 @@ export async function openNavigationWithChoice(
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Exportações públicas
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Limpa o app de navegação padrão salvo.
- * Útil para expor nas configurações do perfil.
+ * Abre a navegação para a praia.
+ * Android → intent geo: (seletor nativo do sistema)
+ * iOS     → menu customizado com apps instalados + preferência salva
+ */
+export async function openNavigationWithChoice(
+  latitude: number,
+  longitude: number,
+  beachName?: string,
+) {
+  const name = beachName ?? 'Praia';
+  if (Platform.OS === 'android') {
+    await openAndroid(latitude, longitude, name);
+  } else {
+    await openIOS(latitude, longitude, name);
+  }
+}
+
+/**
+ * Limpa o app de navegação padrão salvo (iOS).
+ * No Android o sistema gerencia o padrão automaticamente.
  */
 export async function clearNavigationPreference(): Promise<void> {
   await AsyncStorage.removeItem(PREF_KEY);
 }
 
 /**
- * Retorna o nome amigável do app salvo (ou null se não houver).
+ * Retorna o nome amigável do app salvo (iOS apenas, ou null).
  */
 export async function getSavedNavigationApp(): Promise<string | null> {
+  if (Platform.OS !== 'ios') return null;
   const labels: Record<string, string> = {
     waze: 'Waze',
     googleMaps: 'Google Maps',
-    appleMaps: 'Apple Maps',
+    moovit: 'Moovit',
+    osmand: 'OsmAnd',
+    here: 'HERE Maps',
     browser: 'Google Maps (Navegador)',
   };
   try {
@@ -151,6 +185,10 @@ export async function getSavedNavigationApp(): Promise<string | null> {
 }
 
 /** @deprecated Use openNavigationWithChoice */
-export async function openNavigation(latitude: number, longitude: number, beachName?: string) {
+export async function openNavigation(
+  latitude: number,
+  longitude: number,
+  beachName?: string,
+) {
   return openNavigationWithChoice(latitude, longitude, beachName);
 }
