@@ -17,6 +17,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { theme } from '../../theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getSavedNavigationApp, clearNavigationPreference } from '../../utils/navigation';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, signOut, updateUser } = useAuth();
@@ -24,12 +25,34 @@ export default function ProfileScreen({ navigation }: any) {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { favorites, loadFavorites } = useFavorites();
+  const [savedNavApp, setSavedNavApp] = useState<string | null>(null);
 
   useEffect(() => {
     loadStats();
     // ensure favorites are loaded from API/cache
     loadFavorites().catch(() => {});
+    // carrega app de navegação salvo
+    getSavedNavigationApp().then(setSavedNavApp);
   }, []);
+
+  const handleClearNavPreference = () => {
+    Alert.alert(
+      'App de Navegação',
+      `App padrão atual: ${savedNavApp ?? 'nenhum'}\n\nDeseja redefinir para perguntar novamente?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Redefinir',
+          style: 'destructive',
+          onPress: async () => {
+            await clearNavigationPreference();
+            setSavedNavApp(null);
+            Alert.alert('Pronto', 'Na próxima vez você poderá escolher o app de navegação.');
+          },
+        },
+      ],
+    );
+  };
 
   // Load local check-ins saved in AsyncStorage (keys like last_checkin:{beachId})
   useEffect(() => {
@@ -202,6 +225,19 @@ export default function ProfileScreen({ navigation }: any) {
             />
           </View>
         )}
+
+        <TouchableOpacity style={styles.menuItem} onPress={handleClearNavPreference}>
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="navigate-outline" size={24} color={theme.colors.text} />
+            <View>
+              <Text style={styles.menuItemText}>App de Navegação</Text>
+              <Text style={styles.menuItemSub}>
+                {savedNavApp ? `Padrão: ${savedNavApp}` : 'Pergunta a cada vez'}
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Privacy')}>
           <View style={styles.menuItemLeft}>
