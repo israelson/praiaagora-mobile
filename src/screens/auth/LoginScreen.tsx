@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
@@ -19,6 +20,10 @@ import { theme } from '../../theme';
 // OAuth imports mantidos para uso futuro
 // import SocialLoginButton from '../../components/auth/SocialLoginButton';
 // import { useGoogleAuth, handleGoogleResponse } from '../../services/oauth';
+
+const HEADER_HEIGHT = 240;
+const LOGO_SIZE = 130;
+const LOGO_OVERLAP = LOGO_SIZE / 2;
 
 export default function LoginScreen({ navigation }: any) {
   const { signIn } = useAuth();
@@ -53,22 +58,20 @@ export default function LoginScreen({ navigation }: any) {
   };
 
   return (
-    <LinearGradient
-      colors={['#9ECFDF', '#E8B07A']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.container}
-    >
-      {/* ── Logo area (topo) ── */}
-      <View style={styles.logoArea}>
-        <Image
-          source={require('../../../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </View>
+    <View style={styles.root}>
+      {/* ── Faixa de gradiente (header) ── */}
+      <LinearGradient
+        colors={['#9ECFDF', '#E8B07A']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <SafeAreaView edges={['top']} style={styles.headerContent}>
+          <Text style={styles.appTagline}>Viva o melhor do litoral</Text>
+        </SafeAreaView>
+      </LinearGradient>
 
-      {/* ── Card branco com formulário (base) ── */}
+      {/* ── Card branco (corpo) ── */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.cardWrapper}
@@ -79,6 +82,9 @@ export default function LoginScreen({ navigation }: any) {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.card}>
+            {/* Espaço para o logo que flutua acima */}
+            <View style={styles.logoSpacing} />
+
             <Text style={styles.cardTitle}>Entrar na conta</Text>
 
             <Input
@@ -136,26 +142,44 @@ export default function LoginScreen({ navigation }: any) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+
+      {/* ── Logo flutuante na fronteira gradiente ↔ card ── */}
+      <View style={styles.logoContainer} pointerEvents="none">
+        <View style={styles.logoShadow}>
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
+    backgroundColor: theme.colors.surface,
   },
-  logoArea: {
-    flex: 0.42,
+  header: {
+    height: HEADER_HEIGHT,
+    justifyContent: 'flex-end',
+    paddingBottom: LOGO_OVERLAP + 12,
+  },
+  headerContent: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing.xl,
   },
-  logo: {
-    width: '100%',
-    height: 200,
+  appTagline: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: theme.fontSize.sm,
+    letterSpacing: 1.2,
+    fontWeight: '500',
+    textTransform: 'uppercase',
   },
   cardWrapper: {
-    flex: 0.58,
+    flex: 1,
+    marginTop: -LOGO_OVERLAP,
   },
   scrollContent: {
     flexGrow: 1,
@@ -166,13 +190,16 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.xl,
+    paddingTop: 0,
     paddingBottom: theme.spacing.xxl,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 8,
+  },
+  logoSpacing: {
+    height: LOGO_OVERLAP + 16,
   },
   cardTitle: {
     fontSize: theme.fontSize.xl,
@@ -205,5 +232,32 @@ const styles = StyleSheet.create({
     marginHorizontal: theme.spacing.md,
     color: theme.colors.textSecondary,
     fontSize: theme.fontSize.sm,
+  },
+  // Logo flutuante
+  logoContainer: {
+    position: 'absolute',
+    top: HEADER_HEIGHT - LOGO_OVERLAP,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  logoShadow: {
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
+    borderRadius: LOGO_SIZE / 2,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
   },
 });
