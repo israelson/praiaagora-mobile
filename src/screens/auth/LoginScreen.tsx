@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,16 +10,13 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
-import SocialLoginButton from '../../components/auth/SocialLoginButton';
 import { theme } from '../../theme';
-import {
-  useGoogleAuth,
-  handleGoogleResponse,
-} from '../../services/oauth';
+// OAuth imports mantidos para uso futuro
+// import SocialLoginButton from '../../components/auth/SocialLoginButton';
+// import { useGoogleAuth, handleGoogleResponse } from '../../services/oauth';
 
 export default function LoginScreen({ navigation }: any) {
   const { signIn } = useAuth();
@@ -27,42 +24,8 @@ export default function LoginScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-
-  // OAuth hooks
-  const {
-    request: googleRequest,
-    response: googleResponse,
-    promptAsync: promptGoogleAsync,
-  } = useGoogleAuth();
-
-  // Handle Google response
-  useEffect(() => {
-    if (googleResponse) {
-      handleGoogleLogin();
-    }
-  }, [googleResponse]);
-
-  const handleGoogleLogin = async () => {
-    setGoogleLoading(true);
-    try {
-      const result = await handleGoogleResponse(googleResponse);
-      if (result) {
-        // Salvar tokens
-        await AsyncStorage.setItem('access_token', result.access_token);
-        await AsyncStorage.setItem('refresh_token', result.refresh_token);
-        // O AuthContext vai detectar e atualizar
-        Alert.alert('Sucesso', 'Login com Google realizado!');
-      }
-    } catch (error: any) {
-      Alert.alert(
-        'Erro no login com Google',
-        error.response?.data?.detail || 'Tente novamente'
-      );
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
+  // Google OAuth desabilitado temporariamente (pré-lançamento)
+  // const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -111,21 +74,6 @@ export default function LoginScreen({ navigation }: any) {
           </View>
 
           <View style={styles.form}>
-            {/* OAuth Buttons */}
-            <SocialLoginButton
-              provider="google"
-              onPress={() => promptGoogleAsync()}
-              disabled={!googleRequest || googleLoading}
-              loading={googleLoading}
-            />
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
             {/* Email/Password Login */}
             <Input
               label="E-mail"
