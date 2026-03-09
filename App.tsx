@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler';
 import React, { useRef, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { LogBox } from 'react-native';
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
@@ -9,6 +10,13 @@ import { FavoritesProvider } from './src/contexts/FavoritesContext';
 import { NotificationsProvider } from './src/contexts/NotificationsContext';
 import { ThemeProvider, useTheme } from './src/theme';
 import RootNavigator from './src/navigation/RootNavigator';
+
+// Suprimir aviso do expo-notifications no Expo Go (SDK 53+)
+// Push remoto não funciona no Expo Go; notificações locais continuam OK.
+LogBox.ignoreLogs([
+  'expo-notifications: Android Push notifications',
+  '`expo-notifications` functionality is not fully supported in Expo Go',
+]);
 
 function AppContent() {
   const { isDark } = useTheme();
