@@ -7,6 +7,8 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,8 +26,6 @@ export default function LoginScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  // Google OAuth desabilitado temporariamente (pré-lançamento)
-  // const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -39,13 +39,13 @@ export default function LoginScreen({ navigation }: any) {
     } catch (error: any) {
       const detail = error.response?.data?.detail;
       let errorMessage = 'Verifique suas credenciais e tente novamente';
-      
+
       if (typeof detail === 'string') {
         errorMessage = detail;
       } else if (Array.isArray(detail)) {
         errorMessage = detail.map((err: any) => err.msg || err.message).join('\n');
       }
-      
+
       Alert.alert('Erro ao fazer login', errorMessage);
     } finally {
       setLoading(false);
@@ -59,24 +59,28 @@ export default function LoginScreen({ navigation }: any) {
       end={{ x: 1, y: 1 }}
       style={styles.container}
     >
+      {/* ── Logo area (topo) ── */}
+      <View style={styles.logoArea}>
+        <Image
+          source={require('../../../assets/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </View>
+
+      {/* ── Card branco com formulário (base) ── */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+        style={styles.cardWrapper}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
-            <Ionicons name="water" size={80} color={theme.colors.textInverse} />
-            <Text style={styles.title}>Beachly</Text>
-            <Text style={styles.subtitle}>
-              Viva o melhor do litoral.
-            </Text>
-          </View>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Entrar na conta</Text>
 
-          <View style={styles.form}>
-            {/* Email/Password Login */}
             <Input
               label="E-mail"
               placeholder="seu@email.com"
@@ -88,14 +92,26 @@ export default function LoginScreen({ navigation }: any) {
               icon="mail"
             />
 
-            <Input
-              label="Senha"
-              placeholder="••••••••"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              icon="lock-closed"
-            />
+            <View style={styles.passwordRow}>
+              <Input
+                label="Senha"
+                placeholder="••••••••"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                icon="lock-closed"
+              />
+              <TouchableOpacity
+                style={styles.showPasswordBtn}
+                onPress={() => setShowPassword(v => !v)}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={theme.colors.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
 
             <Button
               title="Entrar"
@@ -105,12 +121,17 @@ export default function LoginScreen({ navigation }: any) {
               size="large"
             />
 
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>não tem conta?</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
             <Button
-              title="Criar conta"
-              variant="ghost"
+              title="Criar conta gratuita"
+              variant="outline"
               onPress={() => navigation.navigate('Register')}
               fullWidth
-              style={styles.registerButton}
             />
           </View>
         </ScrollView>
@@ -123,33 +144,52 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  keyboardView: {
-    flex: 1,
+  logoArea: {
+    flex: 0.42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.xl,
+  },
+  logo: {
+    width: '100%',
+    height: 200,
+  },
+  cardWrapper: {
+    flex: 0.58,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: theme.spacing.xl,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xxl,
+  card: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  title: {
-    fontSize: theme.fontSize.xxxl,
+  cardTitle: {
+    fontSize: theme.fontSize.xl,
     fontWeight: theme.fontWeight.bold,
-    color: theme.colors.textInverse,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  subtitle: {
-    fontSize: theme.fontSize.md,
-    color: theme.colors.textInverse,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.lg,
     textAlign: 'center',
-    opacity: 0.9,
   },
-  form: {
-    width: '100%',
+  passwordRow: {
+    position: 'relative',
+  },
+  showPasswordBtn: {
+    position: 'absolute',
+    right: theme.spacing.md,
+    bottom: theme.spacing.lg,
+    padding: 4,
+    zIndex: 1,
   },
   divider: {
     flexDirection: 'row',
@@ -159,15 +199,11 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: theme.colors.border,
   },
   dividerText: {
     marginHorizontal: theme.spacing.md,
-    color: theme.colors.textInverse,
+    color: theme.colors.textSecondary,
     fontSize: theme.fontSize.sm,
-    fontWeight: theme.fontWeight.medium,
-  },
-  registerButton: {
-    marginTop: theme.spacing.md,
   },
 });

@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,29 +47,19 @@ export default function RegisterScreen({ navigation }: any) {
       return;
     }
 
-    if (!/[A-Z]/.test(password)) {
-      Alert.alert('Erro', 'A senha deve conter pelo menos uma letra maiúscula');
-      return;
-    }
-
     setLoading(true);
     try {
-      await signUp({
-        full_name: fullName,
-        email: email.toLowerCase().trim(),
-        password,
-        city: city || undefined,
-      });
+      await signUp({ full_name: fullName, email: email.toLowerCase().trim(), password, city });
     } catch (error: any) {
       const detail = error.response?.data?.detail;
-      let errorMessage = 'Tente novamente mais tarde';
-      
+      let errorMessage = 'Não foi possível criar a conta';
+
       if (typeof detail === 'string') {
         errorMessage = detail;
       } else if (Array.isArray(detail)) {
         errorMessage = detail.map((err: any) => err.msg || err.message).join('\n');
       }
-      
+
       Alert.alert('Erro ao criar conta', errorMessage);
     } finally {
       setLoading(false);
@@ -82,30 +73,31 @@ export default function RegisterScreen({ navigation }: any) {
       end={{ x: 1, y: 1 }}
       style={styles.container}
     >
+      {/* ── Logo area (topo) ── */}
+      <View style={styles.logoArea}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Image
+          source={require('../../../assets/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </View>
+
+      {/* ── Card branco com formulário (base) ── */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+        style={styles.cardWrapper}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.backButton}
-            >
-              <Ionicons name="arrow-back" size={24} color={theme.colors.textInverse} />
-            </TouchableOpacity>
-            <Ionicons name="person-add" size={60} color={theme.colors.textInverse} />
-            <Text style={styles.title}>Criar Conta</Text>
-            <Text style={styles.subtitle}>
-              Junte-se à comunidade Beachly
-            </Text>
-          </View>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Criar conta</Text>
 
-          <View style={styles.form}>
-            {/* Email/Password Registration */}
             <Input
               label="Nome Completo *"
               placeholder="Seu nome"
@@ -164,6 +156,19 @@ export default function RegisterScreen({ navigation }: any) {
             <Text style={styles.termsText}>
               Ao criar uma conta, você concorda com nossos Termos de Uso e Política de Privacidade
             </Text>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>já tem conta?</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Button
+              title="Fazer login"
+              variant="outline"
+              onPress={() => navigation.goBack()}
+              fullWidth
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -175,61 +180,70 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: theme.spacing.xl,
-    paddingTop: Platform.OS === 'ios' ? 60 : theme.spacing.xl,
-  },
-  header: {
+  logoArea: {
+    flex: 0.28,
     alignItems: 'center',
-    marginBottom: theme.spacing.xl,
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.xl,
+  },
+  logo: {
+    width: '85%',
+    height: 120,
   },
   backButton: {
     position: 'absolute',
-    left: 0,
-    top: 0,
+    left: theme.spacing.lg,
+    top: Platform.OS === 'ios' ? 10 : 8,
     padding: theme.spacing.sm,
+    zIndex: 1,
   },
-  title: {
-    fontSize: theme.fontSize.xxxl,
+  cardWrapper: {
+    flex: 0.72,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  card: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  cardTitle: {
+    fontSize: theme.fontSize.xl,
     fontWeight: theme.fontWeight.bold,
-    color: theme.colors.textInverse,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  subtitle: {
-    fontSize: theme.fontSize.md,
-    color: theme.colors.textInverse,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.md,
     textAlign: 'center',
-    opacity: 0.9,
   },
-  form: {
-    width: '100%',
+  termsText: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    marginTop: theme.spacing.md,
+    lineHeight: 18,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: theme.spacing.lg,
+    marginVertical: theme.spacing.md,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: theme.colors.border,
   },
   dividerText: {
     marginHorizontal: theme.spacing.md,
-    color: theme.colors.textInverse,
-    fontSize: theme.fontSize.xs,
-    fontWeight: theme.fontWeight.medium,
-  },
-  termsText: {
-    fontSize: theme.fontSize.xs,
-    color: theme.colors.textInverse,
-    textAlign: 'center',
-    marginTop: theme.spacing.lg,
-    opacity: 0.8,
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.sm,
   },
 });
