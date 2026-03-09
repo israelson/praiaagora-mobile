@@ -8,8 +8,15 @@ import api from './api';
 const PUSH_TOKEN_KEY = 'expo_push_token';
 const NOTIF_ENABLED_KEY = 'notifications_enabled';
 
+// ── Expo Go detection ────────────────────────────────────────────────────────
+// Remote push notifications (getExpoPushTokenAsync) foram removidas do
+// Expo Go no SDK 53. Notificações locais (scheduleNotificationAsync) ainda
+// funcionam normalmente.
+const isExpoGo =
+  Constants.appOwnership === 'expo' ||
+  (Constants as any).executionEnvironment === 'storeClient';
+
 // ── Default notification handler ────────────────────────────────────────────
-// Show notification as banner while app is in foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -23,26 +30,29 @@ Notifications.setNotificationHandler({
 // ── Android channel setup ────────────────────────────────────────────────────
 export async function setupAndroidChannel() {
   if (Platform.OS !== 'android') return;
+  try {
+    await Notifications.setNotificationChannelAsync('balneability', {
+      name: 'Qualidade da Água',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#1BADB0',
+      description: 'Alertas sobre a qualidade da água das praias favoritas',
+    });
 
-  await Notifications.setNotificationChannelAsync('balneability', {
-    name: 'Qualidade da Água',
-    importance: Notifications.AndroidImportance.HIGH,
-    vibrationPattern: [0, 250, 250, 250],
-    lightColor: '#1BADB0',
-    description: 'Alertas sobre a qualidade da água das praias favoritas',
-  });
+    await Notifications.setNotificationChannelAsync('checkin', {
+      name: 'Check-ins',
+      importance: Notifications.AndroidImportance.DEFAULT,
+      description: 'Lembretes e confirmações de check-in',
+    });
 
-  await Notifications.setNotificationChannelAsync('checkin', {
-    name: 'Check-ins',
-    importance: Notifications.AndroidImportance.DEFAULT,
-    description: 'Lembretes e confirmações de check-in',
-  });
-
-  await Notifications.setNotificationChannelAsync('general', {
-    name: 'Geral',
-    importance: Notifications.AndroidImportance.DEFAULT,
-    description: 'Notificações gerais do Beachly',
-  });
+    await Notifications.setNotificationChannelAsync('general', {
+      name: 'Geral',
+      importance: Notifications.AndroidImportance.DEFAULT,
+      description: 'Notificações gerais do Beachly',
+    });
+  } catch (error) {
+    console.warn('[Notifications] setupAndroidChannel error (ignorado):', error);
+  }
 }
 
 // ── Request permission + get Expo push token ─────────────────────────────────
@@ -69,6 +79,13 @@ export async function requestPermissionsAndGetToken(): Promise<string | null> {
 
     await setupAndroidChannel();
 
+    // Push remotos NÃO funcionam no Expo Go (SDK 53+)
+    // Retorna null mas não bloqueia notificações locais
+    if (isExpoGo) {
+      console.info('[Notifications] Expo Go detectado — push remoto desabilitado. Notificações locais funcionam normalmente.');
+      return null;
+    }
+
     // Expo push token requires projectId
     const projectId =
       Constants.expoConfig?.extra?.eas?.projectId ??
@@ -85,7 +102,7 @@ export async function requestPermissionsAndGetToken(): Promise<string | null> {
     await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
     return token;
   } catch (error) {
-    console.error('[Notifications] Error getting push token:', error);
+    console.warn('[Notifications] Error getting push token (ignorado):', error);
     return null;
   }
 }
@@ -139,22 +156,25 @@ export async function notifyWaterQuality(
   quality: string,
   beachId: string | number
 ): Promise<void> {
-  const isProper = quality === 'PROPER';
-
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: isProper
-        ? `✅ ${beachName} — Água Própria`
-        : `⚠️ ${beachName} — Água Imprópria`,
-      body: isProper
-        ? 'A qualidade da água está boa. Bom banho! 🌊'
-        : 'A praia está com água imprópria para banho. Evite o mergulho.',
-      data: { type: 'water_quality', beachId: String(beachId) },
-      sound: 'default',
-      ...(Platform.OS === 'android' && { channelId: 'balneability' }),
-    },
-    trigger: null, // immediate
-  });
+  try {
+    const isProper = quality === 'PROPER';
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: isProper
+          ? `✅ ${beachName} — Água Própria`
+          : `⚠️ ${beachName} — Água Imprópria`,
+        body: isProper
+          ? 'A qualidade da água está boa. Bom banho! 🌊'
+          : 'A praia está com água imprópria para banho. Evite o mergulho.',
+        data: { type: 'water_quality', beachId: String(beachId) },
+        sound: 'default',
+        ...(Platform.OS === 'android' && { channelId: 'balneability' }),
+      },
+      trigger: null,
+    });
+  } catch (error) {
+    console.warn('[Notifications] notifyWaterQuality error (ignorado):', error);
+  }
 }
 
 /**
@@ -162,26 +182,28 @@ export async function notifyWaterQuality(
  * e.g. every day at 08:00.
  */
 export async function scheduleDailyReminder(hour = 8, minute = 0): Promise<string> {
-  // Cancel existing daily reminders first
-  await cancelDailyReminder();
-
-  const id = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: '🌊 Bom dia! Como estão as praias?',
-      body: 'Confira a qualidade da água e condições das suas praias favoritas.',
-      data: { type: 'daily_reminder' },
-      sound: 'default',
-      ...(Platform.OS === 'android' && { channelId: 'general' }),
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-    },
-  });
-
-  await AsyncStorage.setItem('daily_reminder_id', id);
-  return id;
+  try {
+    await cancelDailyReminder();
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '🌊 Bom dia! Como estão as praias?',
+        body: 'Confira a qualidade da água e condições das suas praias favoritas.',
+        data: { type: 'daily_reminder' },
+        sound: 'default',
+        ...(Platform.OS === 'android' && { channelId: 'general' }),
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+      },
+    });
+    await AsyncStorage.setItem('daily_reminder_id', id);
+    return id;
+  } catch (error) {
+    console.warn('[Notifications] scheduleDailyReminder error (ignorado):', error);
+    return '';
+  }
 }
 
 export async function cancelDailyReminder(): Promise<void> {
@@ -200,16 +222,20 @@ export async function cancelDailyReminder(): Promise<void> {
  * Fire a local "check-in" confirmation notification.
  */
 export async function notifyCheckinSuccess(beachName: string): Promise<void> {
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: `📍 Check-in realizado!`,
-      body: `Você está em ${beachName}. Obrigado por contribuir com os dados! 🤙`,
-      data: { type: 'checkin' },
-      sound: 'default',
-      ...(Platform.OS === 'android' && { channelId: 'checkin' }),
-    },
-    trigger: null,
-  });
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `📍 Check-in realizado!`,
+        body: `Você está em ${beachName}. Obrigado por contribuir com os dados! 🤙`,
+        data: { type: 'checkin' },
+        sound: 'default',
+        ...(Platform.OS === 'android' && { channelId: 'checkin' }),
+      },
+      trigger: null,
+    });
+  } catch (error) {
+    console.warn('[Notifications] notifyCheckinSuccess error (ignorado):', error);
+  }
 }
 
 // ── Cancel all ───────────────────────────────────────────────────────────────

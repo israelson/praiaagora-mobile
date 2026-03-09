@@ -98,12 +98,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       if (token) {
         setPushToken(token);
         await registerTokenWithBackend(token);
-      } else {
-        // Permission denied — revert
-        setEnabled(false);
-        await AsyncStorage.setItem('notifications_enabled', 'false');
-        return;
       }
+      // token null = Expo Go ou permissão negada
+      // Se foi permissão negada, getPermissionsAsync já logou aviso.
+      // Mantemos o toggle ligado para notificações locais funcionarem.
     } else {
       // Disable: cancel all scheduled local notifications
       await cancelAllNotifications();
