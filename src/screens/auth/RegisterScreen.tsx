@@ -77,7 +77,9 @@ export default function RegisterScreen({ navigation }: any) {
 
   return (
     <LinearGradient
-      colors={[theme.colors.primary, theme.colors.primaryDark]}
+      colors={['#9ECFDF', '#E8B07A']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={styles.container}
     >
       <KeyboardAvoidingView

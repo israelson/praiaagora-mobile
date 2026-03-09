@@ -1,37 +1,43 @@
-// Light theme (current)
+// Beachly brand palette (derived from official logo)
+// Primary teal  → wave/ocean color
+// Accent gold   → sun/"ly" color
+// Gradient bg   → logo background (sky-blue → warm-peach)
 export const lightTheme = {
   colors: {
-    primary: '#0ea5e9',
-    primaryDark: '#0284c7',
-    primaryLight: '#38bdf8',
-    secondary: '#06b6d4',
-    accent: '#f59e0b',
-    
+    primary: '#1BADB0',       // teal da onda
+    primaryDark: '#0D8F92',   // teal escuro
+    primaryLight: '#5ECFD2',  // teal claro
+    secondary: '#0D8F92',     // teal profundo
+    accent: '#F5A520',        // dourado do sol
+
+    gradientStart: '#9ECFDF', // azul-céu do fundo da logo
+    gradientEnd: '#E8B07A',   // pêssego/dourado do fundo da logo
+
     success: '#10b981',
-    warning: '#f59e0b',
+    warning: '#F5A520',       // usa o dourado da marca
     error: '#ef4444',
-    info: '#3b82f6',
-    
-    background: '#f8fafc',
+    info: '#1BADB0',          // usa o teal da marca
+
+    background: '#F0F8FA',    // levemente azulado
     surface: '#ffffff',
     card: '#ffffff',
-    
+
     text: '#1e293b',
     textSecondary: '#64748b',
     textLight: '#94a3b8',
     textInverse: '#ffffff',
-    
-    border: '#e2e8f0',
-    borderLight: '#f1f5f9',
-    
+
+    border: '#D4EEF0',
+    borderLight: '#EBF7F8',
+
     crowdLow: '#10b981',
-    crowdModerate: '#f59e0b',
+    crowdModerate: '#F5A520',
     crowdHigh: '#f97316',
     crowdVeryHigh: '#ef4444',
-    
+
     waterExcellent: '#10b981',
-    waterGood: '#3b82f6',
-    waterRegular: '#f59e0b',
+    waterGood: '#1BADB0',
+    waterRegular: '#F5A520',
     waterBad: '#ef4444',
   },
 };
@@ -39,16 +45,19 @@ export const lightTheme = {
 // Dark theme
 export const darkTheme = {
   colors: {
-    primary: '#38bdf8',
-    primaryDark: '#0ea5e9',
-    primaryLight: '#7dd3fc',
-    secondary: '#22d3ee',
-    accent: '#fbbf24',
+    primary: '#5ECFD2',
+    primaryDark: '#1BADB0',
+    primaryLight: '#8EE3E5',
+    secondary: '#1BADB0',
+    accent: '#F5A520',
+
+    gradientStart: '#1A3A4A',
+    gradientEnd: '#3A2A10',
     
     success: '#34d399',
-    warning: '#fbbf24',
+    warning: '#F5A520',
     error: '#f87171',
-    info: '#60a5fa',
+    info: '#5ECFD2',
     
     background: '#0f172a', // slate-900
     surface: '#1e293b', // slate-800
@@ -68,8 +77,8 @@ export const darkTheme = {
     crowdVeryHigh: '#f87171',
     
     waterExcellent: '#34d399',
-    waterGood: '#60a5fa',
-    waterRegular: '#fbbf24',
+    waterGood: '#5ECFD2',
+    waterRegular: '#F5A520',
     waterBad: '#f87171',
   },
 };

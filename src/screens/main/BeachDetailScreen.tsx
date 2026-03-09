@@ -129,7 +129,7 @@ export default function BeachDetailScreen({ route, navigation }: any) {
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadBeachData(true)} />}>
 
         {/* ── Header ── */}
-        <LinearGradient colors={[theme.colors.primary, theme.colors.primaryDark]} style={styles.header}>
+        <LinearGradient colors={['#9ECFDF', '#E8B07A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
           <Text style={styles.beachName}>{beach.name}</Text>
           <View style={styles.locationRow}>
             <Ionicons name="location" size={16} color={theme.colors.textInverse} />

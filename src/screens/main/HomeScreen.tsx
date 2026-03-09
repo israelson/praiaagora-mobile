@@ -270,7 +270,9 @@ export default function HomeScreen({ navigation }: any) {
         }}
       >
         <LinearGradient
-          colors={[theme.colors.primary, theme.colors.primaryDark]}
+          colors={['#9ECFDF', '#E8B07A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={styles.header}
         >
           <Text style={styles.greeting}>Olá, {user?.full_name?.split(' ')[0]}! 👋</Text>

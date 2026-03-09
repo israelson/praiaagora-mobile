@@ -168,11 +168,11 @@ function SplashScreen() {
   }, [fadeAnim, scaleAnim]);
 
   return (
-    <LinearGradient colors={[theme.colors.primary, theme.colors.primaryDark]} style={splashStyles.container}>
+    <LinearGradient colors={['#9ECFDF', '#E8B07A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={splashStyles.container}>
       <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
-        <Ionicons name="water" size={80} color={theme.colors.textInverse} />
+        <Ionicons name="water" size={80} color="#ffffff" />
         <Text style={splashStyles.title}>Beachly</Text>
-        <Text style={splashStyles.subtitle}>Encontre a praia perfeita</Text>
+        <Text style={splashStyles.subtitle}>Viva o melhor do litoral.</Text>
       </Animated.View>
       <ActivityIndicator style={splashStyles.spinner} size="small" color={theme.colors.textInverse} />
     </LinearGradient>

@@ -54,7 +54,9 @@ export default function LoginScreen({ navigation }: any) {
 
   return (
     <LinearGradient
-      colors={[theme.colors.primary, theme.colors.primaryDark]}
+      colors={['#9ECFDF', '#E8B07A']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={styles.container}
     >
       <KeyboardAvoidingView
@@ -69,7 +71,7 @@ export default function LoginScreen({ navigation }: any) {
             <Ionicons name="water" size={80} color={theme.colors.textInverse} />
             <Text style={styles.title}>Beachly</Text>
             <Text style={styles.subtitle}>
-              Encontre as melhores praias de Santa Catarina
+              Viva o melhor do litoral.
             </Text>
           </View>
 
