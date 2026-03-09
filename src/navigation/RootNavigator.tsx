@@ -45,21 +45,22 @@ function TabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: theme.colors.primary,
+        tabBarActiveTintColor: '#1BADB0',
         tabBarInactiveTintColor: theme.colors.textSecondary,
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
+          borderTopColor: '#D4EEF0',
+          borderTopWidth: 1.5,
           height: 60,
           paddingBottom: 8,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '500',
+          fontWeight: '600',
         },
         headerStyle: {
-          backgroundColor: theme.colors.primary,
+          backgroundColor: '#1BADB0',
         },
         headerTintColor: theme.colors.textInverse,
         headerTitleStyle: {
@@ -109,7 +110,7 @@ function MainStack() {
     <Stack.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: theme.colors.primary,
+          backgroundColor: '#1BADB0',
         },
         headerTintColor: theme.colors.textInverse,
         headerTitleStyle: {

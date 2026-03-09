@@ -28,7 +28,7 @@ export async function setupAndroidChannel() {
     name: 'Qualidade da Água',
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: '#0ea5e9',
+    lightColor: '#1BADB0',
     description: 'Alertas sobre a qualidade da água das praias favoritas',
   });
 

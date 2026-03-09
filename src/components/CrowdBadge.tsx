@@ -27,15 +27,15 @@ const CROWD_CONFIG = {
   },
   medium: {
     emoji: '🟡',
-    color: '#f59e0b',
-    bgColor: '#fef3c7',
+    color: '#F5A520',
+    bgColor: '#FEF3C7',
     label: 'Possivelmente moderada',
     description: 'Tende a ter movimento moderado'
   },
   MEDIUM: {
     emoji: '🟡',
-    color: '#f59e0b',
-    bgColor: '#fef3c7',
+    color: '#F5A520',
+    bgColor: '#FEF3C7',
     label: 'Possivelmente moderada',
     description: 'Tende a ter movimento moderado'
   },
