@@ -8,6 +8,7 @@ import {
   Alert,
   Switch,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -27,6 +28,20 @@ export default function ProfileScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const { favorites, loadFavorites } = useFavorites();
   const [savedNavApp, setSavedNavApp] = useState<string | null>(null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+  // Recarrega avatar sempre que a tela recebe foco (ao voltar do EditProfile)
+  useEffect(() => {
+    const loadAvatar = async () => {
+      try {
+        const uri = await AsyncStorage.getItem('user_avatar');
+        setAvatarUri(uri);
+      } catch { /* ignore */ }
+    };
+    loadAvatar();
+    const unsubscribe = navigation.addListener('focus', loadAvatar);
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => {
     loadStats();
@@ -149,7 +164,11 @@ export default function ProfileScreen({ navigation }: any) {
       {/* Profile Header */}
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
-          <Ionicons name="person" size={60} color={theme.colors.textInverse} />
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+          ) : (
+            <Ionicons name="person" size={60} color={theme.colors.textInverse} />
+          )}
         </View>
         <Text style={styles.name}>{user?.full_name}</Text>
         <Text style={styles.email}>{user?.email}</Text>
@@ -330,6 +349,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.md,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    resizeMode: 'cover',
   },
   name: {
     fontSize: theme.fontSize.xxl,
