@@ -6,8 +6,13 @@ interface User {
   id: number;
   email: string;
   full_name: string;
-  city?: string;
+  city?: string;          // campo local (não retornado pelo backend)
   is_active: boolean;
+  is_verified: boolean;
+  provider: string;       // 'email' | 'google' | etc.
+  avatar_url?: string | null;  // URL remota de avatar (ex: foto do Google)
+  role?: string;
+  last_login_at?: string | null;
   created_at: string;
 }
 
@@ -41,7 +46,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const storedToken = await AsyncStorage.getItem('access_token');
 
       if (storedUser && storedToken) {
+        // Carrega do cache imediatamente para não bloquear o app
         setUser(JSON.parse(storedUser));
+
+        // Em background, atualiza com dados frescos do backend (is_verified, avatar_url, last_login_at, etc.)
+        api.getProfile().then(async (freshUser) => {
+          const cached = JSON.parse(storedUser);
+          // Preserva campos locais (city não vem do backend)
+          const updated = { ...cached, ...freshUser, city: freshUser.city ?? cached.city };
+          await AsyncStorage.setItem('user', JSON.stringify(updated));
+          setUser(updated);
+        }).catch(() => { /* ignora falha de rede — usa cache */ });
       }
     } catch (error) {
       console.error('Error loading storage data:', error);

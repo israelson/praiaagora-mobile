@@ -120,11 +120,11 @@ export default function ProfileScreen({ navigation }: any) {
           .filter((p) => p?.date);
         const count = parsed.length;
         setStats((prev: any) => {
-          const base = prev || { total_checkins: 0, total_favorites: 0, unique_beaches_visited: 0 };
+          const base = prev || { total_checkins: 0, total_favorites: 0, unique_beaches: 0 };
           return {
             ...base,
             total_checkins: Math.max(base.total_checkins || 0, count),
-            unique_beaches_visited: Math.max(base.unique_beaches_visited || 0, count),
+            unique_beaches: Math.max(base.unique_beaches || 0, count),
           };
         });
       } catch { /* ignore */ }
@@ -135,11 +135,11 @@ export default function ProfileScreen({ navigation }: any) {
   const loadStats = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token');
-      if (!token) { setStats({ total_checkins: 0, total_favorites: 0, unique_beaches_visited: 0 }); return; }
+      if (!token) { setStats({ total_checkins: 0, total_favorites: 0, unique_beaches: 0 }); return; }
       const response = await api.getUserStats();
       setStats(response);
     } catch {
-      setStats({ total_checkins: 0, total_favorites: 0, unique_beaches_visited: 0 });
+      setStats({ total_checkins: 0, total_favorites: 0, unique_beaches: 0 });
     }
   };
 
@@ -193,14 +193,14 @@ export default function ProfileScreen({ navigation }: any) {
         style={styles.headerGradient}
       >
         <SafeAreaView edges={['top']} style={styles.headerInner}>
-          {/* Avatar */}
+          {/* Avatar: local > remote > iniciais */}
           <TouchableOpacity
             style={styles.avatarWrapper}
             onPress={() => navigation.navigate('EditProfile')}
             activeOpacity={0.85}
           >
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
+            {(avatarUri || user?.avatar_url) ? (
+              <Image source={{ uri: avatarUri || user?.avatar_url! }} style={styles.avatarImg} />
             ) : (
               <View style={styles.avatarFallback}>
                 <Text style={styles.avatarInitials}>{initials(user?.full_name)}</Text>
@@ -211,7 +211,26 @@ export default function ProfileScreen({ navigation }: any) {
             </View>
           </TouchableOpacity>
 
-          <Text style={styles.headerName}>{user?.full_name ?? 'Usuário'}</Text>
+          <Text style={styles.headerName}>
+            {user?.full_name ?? 'Usuário'}
+          </Text>
+
+          {/* Badges: verificado + provider */}
+          <View style={styles.headerBadges}>
+            {user?.is_verified && (
+              <View style={styles.badgeVerified}>
+                <Ionicons name="checkmark-circle" size={12} color="#fff" />
+                <Text style={styles.badgeText}>Verificado</Text>
+              </View>
+            )}
+            {user?.provider && user.provider !== 'email' && (
+              <View style={styles.badgeProvider}>
+                <Ionicons name="logo-google" size={12} color="#fff" />
+                <Text style={styles.badgeText}>{user.provider}</Text>
+              </View>
+            )}
+          </View>
+
           <Text style={styles.headerEmail}>{user?.email}</Text>
 
           {user?.city ? (
@@ -235,7 +254,7 @@ export default function ProfileScreen({ navigation }: any) {
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statNum}>{stats?.unique_beaches_visited ?? '—'}</Text>
+          <Text style={styles.statNum}>{stats?.unique_beaches ?? '—'}</Text>
           <Text style={styles.statLbl}>Praias visitadas</Text>
         </View>
         <View style={styles.statDivider} />
@@ -275,6 +294,56 @@ export default function ProfileScreen({ navigation }: any) {
           <Text style={styles.quickLabel}>Editar</Text>
         </TouchableOpacity>
       </View>
+
+      {/* ── ATIVIDADE ── */}
+      {stats && (stats.first_checkin_date || stats.last_checkin_date || stats.favorite_beach_name || user?.last_login_at) && (
+        <View style={styles.section}>
+          <SectionHeader title="Atividade" />
+          <View style={styles.card}>
+            {user?.last_login_at && (
+              <>
+                <MenuRow
+                  icon="time-outline"
+                  label="Último acesso"
+                  sub={new Date(user.last_login_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                  iconBg="#7E57C2"
+                />
+                {(stats.first_checkin_date || stats.last_checkin_date || stats.favorite_beach_name) && <View style={styles.cardDivider} />}
+              </>
+            )}
+            {stats.first_checkin_date && (
+              <>
+                <MenuRow
+                  icon="calendar-outline"
+                  label="Primeiro check-in"
+                  sub={new Date(stats.first_checkin_date).toLocaleDateString('pt-BR', { dateStyle: 'long' } as any)}
+                  iconBg="#26A69A"
+                />
+                {(stats.last_checkin_date || stats.favorite_beach_name) && <View style={styles.cardDivider} />}
+              </>
+            )}
+            {stats.last_checkin_date && (
+              <>
+                <MenuRow
+                  icon="footsteps-outline"
+                  label="Último check-in"
+                  sub={new Date(stats.last_checkin_date).toLocaleDateString('pt-BR', { dateStyle: 'long' } as any)}
+                  iconBg="#42A5F5"
+                />
+                {stats.favorite_beach_name && <View style={styles.cardDivider} />}
+              </>
+            )}
+            {stats.favorite_beach_name && (
+              <MenuRow
+                icon="heart-outline"
+                label="Praia favorita"
+                sub={stats.favorite_beach_name}
+                iconBg="#EF5350"
+              />
+            )}
+          </View>
+        </View>
+      )}
 
       {/* ── CONTA ── */}
       <View style={styles.section}>
@@ -487,6 +556,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255,255,255,0.7)',
     marginTop: 2,
+  },
+  headerBadges: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  badgeVerified: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeProvider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeText: {
+    fontSize: 11,
+    color: '#fff',
+    fontWeight: '600',
+    textTransform: 'capitalize',
   },
 
   // Stats bar

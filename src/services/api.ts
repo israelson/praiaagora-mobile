@@ -252,10 +252,17 @@ class ApiService {
   async getUserStats() {
     try {
       const response = await this.api.get('/api/v1/users/me/checkins/summary');
-      return response.data;
+      // normaliza campos: backend usa unique_beaches, não unique_beaches_visited
+      const data = response.data;
+      return {
+        ...data,
+        unique_beaches: data.unique_beaches ?? data.unique_beaches_visited ?? 0,
+        total_checkins: data.total_checkins ?? 0,
+        total_favorites: data.total_favorites ?? 0,
+      };
     } catch (error) {
       console.warn('getUserStats failed, returning fallback stats', error);
-      return { total_checkins: 0, total_favorites: 0, unique_beaches_visited: 0 };
+      return { total_checkins: 0, total_favorites: 0, unique_beaches: 0 };
     }
   }
 
