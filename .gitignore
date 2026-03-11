@@ -37,3 +37,7 @@ logs/
 # Tests
 coverage/
 .nyc_output/
+
+# Keystore de produção — NUNCA versionar
+*.keystore
+!android/app/debug.keystore
