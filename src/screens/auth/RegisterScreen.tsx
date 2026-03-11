@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,16 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
+import SocialLoginButton from '../../components/auth/SocialLoginButton';
 import { theme } from '../../theme';
+import {
+  useGoogleAuth,
+  handleGoogleResponse,
+} from '../../services/oauth';
 
 export default function RegisterScreen({ navigation }: any) {
   const { signUp } = useAuth();
@@ -25,6 +30,40 @@ export default function RegisterScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  // OAuth hooks
+  const {
+    request: googleRequest,
+    response: googleResponse,
+    promptAsync: promptGoogleAsync,
+  } = useGoogleAuth();
+
+  // Handle Google response
+  useEffect(() => {
+    if (googleResponse) {
+      handleGoogleSignup();
+    }
+  }, [googleResponse]);
+
+  const handleGoogleSignup = async () => {
+    setGoogleLoading(true);
+    try {
+      const result = await handleGoogleResponse(googleResponse);
+      if (result) {
+        await AsyncStorage.setItem('access_token', result.access_token);
+        await AsyncStorage.setItem('refresh_token', result.refresh_token);
+        Alert.alert('Sucesso', 'Cadastro com Google realizado!');
+      }
+    } catch (error: any) {
+      Alert.alert(
+        'Erro no cadastro com Google',
+        error.response?.data?.detail || 'Tente novamente'
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleRegister = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
@@ -42,19 +81,29 @@ export default function RegisterScreen({ navigation }: any) {
       return;
     }
 
+    if (!/[A-Z]/.test(password)) {
+      Alert.alert('Erro', 'A senha deve conter pelo menos uma letra maiúscula');
+      return;
+    }
+
     setLoading(true);
     try {
-      await signUp({ full_name: fullName, email: email.toLowerCase().trim(), password, city });
+      await signUp({
+        full_name: fullName,
+        email: email.toLowerCase().trim(),
+        password,
+        city: city || undefined,
+      });
     } catch (error: any) {
       const detail = error.response?.data?.detail;
-      let errorMessage = 'Não foi possível criar a conta';
-
+      let errorMessage = 'Tente novamente mais tarde';
+      
       if (typeof detail === 'string') {
         errorMessage = detail;
       } else if (Array.isArray(detail)) {
         errorMessage = detail.map((err: any) => err.msg || err.message).join('\n');
       }
-
+      
       Alert.alert('Erro ao criar conta', errorMessage);
     } finally {
       setLoading(false);
@@ -62,35 +111,49 @@ export default function RegisterScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.root}>
-      {/* ── Header com gradiente e marca ── */}
-      <LinearGradient
-        colors={['#9ECFDF', '#1BADB0']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        <SafeAreaView edges={['top']} style={styles.headerContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <Ionicons name="water" size={28} color="rgba(255,255,255,0.9)" style={styles.brandIcon} />
-          <Text style={styles.brandName}>Beachly</Text>
-          <Text style={styles.brandTagline}>Crie sua conta gratuita</Text>
-        </SafeAreaView>
-      </LinearGradient>
-
-      {/* ── Card branco (formulário) ── */}
+    <LinearGradient
+      colors={[theme.colors.primary, theme.colors.primaryDark]}
+      style={styles.container}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.cardWrapper}
+        style={styles.keyboardView}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.card}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color={theme.colors.textInverse} />
+            </TouchableOpacity>
+            <Ionicons name="person-add" size={60} color={theme.colors.textInverse} />
+            <Text style={styles.title}>Criar Conta</Text>
+            <Text style={styles.subtitle}>
+              Junte-se à comunidade Beachly
+            </Text>
+          </View>
+
+          <View style={styles.form}>
+            {/* OAuth Buttons */}
+            <SocialLoginButton
+              provider="google"
+              onPress={() => promptGoogleAsync()}
+              disabled={!googleRequest || googleLoading}
+              loading={googleLoading}
+            />
+
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>ou cadastre-se com e-mail</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Email/Password Registration */}
             <Input
               label="Nome Completo *"
               placeholder="Seu nome"
@@ -147,113 +210,74 @@ export default function RegisterScreen({ navigation }: any) {
             />
 
             <Text style={styles.termsText}>
-              Ao criar uma conta, você concorda com nossos{' '}
-              <Text style={styles.termsLink}>Termos de Uso</Text> e{' '}
-              <Text style={styles.termsLink}>Política de Privacidade</Text>
+              Ao criar uma conta, você concorda com nossos Termos de Uso e Política de Privacidade
             </Text>
-
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>já tem conta?</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <Button
-              title="Fazer login"
-              variant="outline"
-              onPress={() => navigation.goBack()}
-              fullWidth
-            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  container: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
   },
-  header: {
-    paddingBottom: 36,
-  },
-  headerContent: {
-    alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 0,
-  },
-  backButton: {
-    position: 'absolute',
-    left: theme.spacing.lg,
-    top: Platform.OS === 'ios' ? 12 : 10,
-    padding: theme.spacing.sm,
-    zIndex: 1,
-  },
-  brandIcon: {
-    marginBottom: 2,
-  },
-  brandName: {
-    fontSize: 38,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: -1,
-    lineHeight: 44,
-  },
-  brandTagline: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.85)',
-    letterSpacing: 1.6,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    marginTop: 4,
-  },
-  cardWrapper: {
+  keyboardView: {
     flex: 1,
-    marginTop: -24,
   },
   scrollContent: {
     flexGrow: 1,
+    padding: theme.spacing.xl,
+    paddingTop: Platform.OS === 'ios' ? 60 : theme.spacing.xl,
   },
-  card: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.xxl,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 8,
+  header: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
   },
-  termsText: {
-    fontSize: theme.fontSize.xs,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    padding: theme.spacing.sm,
+  },
+  title: {
+    fontSize: theme.fontSize.xxxl,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.textInverse,
     marginTop: theme.spacing.md,
-    lineHeight: 18,
+    marginBottom: theme.spacing.sm,
   },
-  termsLink: {
-    color: theme.colors.primary,
-    fontWeight: '600',
+  subtitle: {
+    fontSize: theme.fontSize.md,
+    color: theme.colors.textInverse,
+    textAlign: 'center',
+    opacity: 0.9,
+  },
+  form: {
+    width: '100%',
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: theme.spacing.md,
+    marginVertical: theme.spacing.lg,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   dividerText: {
     marginHorizontal: theme.spacing.md,
-    color: theme.colors.textSecondary,
-    fontSize: theme.fontSize.sm,
+    color: theme.colors.textInverse,
+    fontSize: theme.fontSize.xs,
+    fontWeight: theme.fontWeight.medium,
+  },
+  termsText: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textInverse,
+    textAlign: 'center',
+    marginTop: theme.spacing.lg,
+    opacity: 0.8,
   },
 });

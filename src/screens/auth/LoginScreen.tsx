@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,19 @@ import {
   Platform,
   ScrollView,
   Alert,
-  TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
+import SocialLoginButton from '../../components/auth/SocialLoginButton';
 import { theme } from '../../theme';
+import {
+  useGoogleAuth,
+  handleGoogleResponse,
+} from '../../services/oauth';
 
 export default function LoginScreen({ navigation }: any) {
   const { signIn } = useAuth();
@@ -23,6 +27,42 @@ export default function LoginScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  // OAuth hooks
+  const {
+    request: googleRequest,
+    response: googleResponse,
+    promptAsync: promptGoogleAsync,
+  } = useGoogleAuth();
+
+  // Handle Google response
+  useEffect(() => {
+    if (googleResponse) {
+      handleGoogleLogin();
+    }
+  }, [googleResponse]);
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    try {
+      const result = await handleGoogleResponse(googleResponse);
+      if (result) {
+        // Salvar tokens
+        await AsyncStorage.setItem('access_token', result.access_token);
+        await AsyncStorage.setItem('refresh_token', result.refresh_token);
+        // O AuthContext vai detectar e atualizar
+        Alert.alert('Sucesso', 'Login com Google realizado!');
+      }
+    } catch (error: any) {
+      Alert.alert(
+        'Erro no login com Google',
+        error.response?.data?.detail || 'Tente novamente'
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -36,13 +76,13 @@ export default function LoginScreen({ navigation }: any) {
     } catch (error: any) {
       const detail = error.response?.data?.detail;
       let errorMessage = 'Verifique suas credenciais e tente novamente';
-
+      
       if (typeof detail === 'string') {
         errorMessage = detail;
       } else if (Array.isArray(detail)) {
         errorMessage = detail.map((err: any) => err.msg || err.message).join('\n');
       }
-
+      
       Alert.alert('Erro ao fazer login', errorMessage);
     } finally {
       setLoading(false);
@@ -50,34 +90,43 @@ export default function LoginScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.root}>
-      {/* ── Header com gradiente e marca ── */}
-      <LinearGradient
-        colors={['#9ECFDF', '#1BADB0']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        <SafeAreaView edges={['top']} style={styles.headerContent}>
-          <Ionicons name="water" size={36} color="rgba(255,255,255,0.9)" style={styles.brandIcon} />
-          <Text style={styles.brandName}>Beachly</Text>
-          <Text style={styles.brandTagline}>Viva o melhor do litoral</Text>
-        </SafeAreaView>
-      </LinearGradient>
-
-      {/* ── Card branco (formulário) ── */}
+    <LinearGradient
+      colors={[theme.colors.primary, theme.colors.primaryDark]}
+      style={styles.container}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.cardWrapper}
+        style={styles.keyboardView}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Entrar na conta</Text>
+          <View style={styles.header}>
+            <Ionicons name="water" size={80} color={theme.colors.textInverse} />
+            <Text style={styles.title}>Beachly</Text>
+            <Text style={styles.subtitle}>
+              Encontre as melhores praias de Santa Catarina
+            </Text>
+          </View>
 
+          <View style={styles.form}>
+            {/* OAuth Buttons */}
+            <SocialLoginButton
+              provider="google"
+              onPress={() => promptGoogleAsync()}
+              disabled={!googleRequest || googleLoading}
+              loading={googleLoading}
+            />
+
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>ou</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Email/Password Login */}
             <Input
               label="E-mail"
               placeholder="seu@email.com"
@@ -89,26 +138,14 @@ export default function LoginScreen({ navigation }: any) {
               icon="mail"
             />
 
-            <View style={styles.passwordRow}>
-              <Input
-                label="Senha"
-                placeholder="••••••••"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                icon="lock-closed"
-              />
-              <TouchableOpacity
-                style={styles.showPasswordBtn}
-                onPress={() => setShowPassword(v => !v)}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
-                  color={theme.colors.textSecondary}
-                />
-              </TouchableOpacity>
-            </View>
+            <Input
+              label="Senha"
+              placeholder="••••••••"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              icon="lock-closed"
+            />
 
             <Button
               title="Entrar"
@@ -118,93 +155,51 @@ export default function LoginScreen({ navigation }: any) {
               size="large"
             />
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>não tem conta?</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
             <Button
-              title="Criar conta gratuita"
-              variant="outline"
+              title="Criar conta"
+              variant="ghost"
               onPress={() => navigation.navigate('Register')}
               fullWidth
+              style={styles.registerButton}
             />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  container: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
   },
-  header: {
-    paddingBottom: 40,
-  },
-  headerContent: {
-    alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 0,
-  },
-  brandIcon: {
-    marginBottom: 4,
-  },
-  brandName: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: -1,
-    lineHeight: 54,
-  },
-  brandTagline: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
-    letterSpacing: 1.8,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    marginTop: 4,
-  },
-  cardWrapper: {
+  keyboardView: {
     flex: 1,
-    marginTop: -24,
   },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
+    padding: theme.spacing.xl,
   },
-  card: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.xxl,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 8,
+  header: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xxl,
   },
-  cardTitle: {
-    fontSize: theme.fontSize.xl,
+  title: {
+    fontSize: theme.fontSize.xxxl,
     fontWeight: theme.fontWeight.bold,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.lg,
+    color: theme.colors.textInverse,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  subtitle: {
+    fontSize: theme.fontSize.md,
+    color: theme.colors.textInverse,
     textAlign: 'center',
+    opacity: 0.9,
   },
-  passwordRow: {
-    position: 'relative',
-  },
-  showPasswordBtn: {
-    position: 'absolute',
-    right: theme.spacing.md,
-    bottom: theme.spacing.lg,
-    padding: 4,
-    zIndex: 1,
+  form: {
+    width: '100%',
   },
   divider: {
     flexDirection: 'row',
@@ -214,11 +209,15 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   dividerText: {
     marginHorizontal: theme.spacing.md,
-    color: theme.colors.textSecondary,
+    color: theme.colors.textInverse,
     fontSize: theme.fontSize.sm,
+    fontWeight: theme.fontWeight.medium,
+  },
+  registerButton: {
+    marginTop: theme.spacing.md,
   },
 });

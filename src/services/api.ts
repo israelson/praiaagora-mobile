@@ -1,13 +1,9 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
 
-// Configure base URL: prefer app.json extra -> env var -> hardcoded fallback
-const manifest: any = (Constants && (Constants.manifest || (Constants as any).expoConfig)) || {};
-const API_BASE_URL =
-  manifest.extra?.API_BASE_URL ||
-  process.env.API_BASE_URL ||
-  'http://76.13.232.232:8000';
+// URL base da API — defina EXPO_PUBLIC_API_URL no .env para sobrescrever
+// Exemplo: EXPO_PUBLIC_API_URL=https://api.praiaagora.com.br
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://76.13.232.232:8000';
 
 class ApiService {
   private api: AxiosInstance;
@@ -87,16 +83,8 @@ class ApiService {
   }
 
   async logout() {
-    try {
-      const response = await this.api.post('/api/v1/auth/logout');
-      return response.data;
-    } catch (error: any) {
-      // Silently ignore 404 (endpoint may not exist) and other errors —
-      // tokens are always cleared locally regardless.
-      if (error.response?.status !== 404) {
-        console.warn('logout endpoint error (ignored):', error.response?.status);
-      }
-    }
+    const response = await this.api.post('/api/v1/auth/logout');
+    return response.data;
   }
 
   // Beach endpoints
@@ -156,21 +144,8 @@ class ApiService {
   }
 
   async getMyCheckIns() {
-    try {
-      const response = await this.api.get('/api/v1/checkins/me');
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        // Try alternative route used by some backends
-        try {
-          const resp = await this.api.get('/api/v1/users/me/checkins');
-          return resp.data;
-        } catch (e) {
-          return [];
-        }
-      }
-      throw error;
-    }
+    const response = await this.api.get('/api/v1/checkins/me');
+    return response.data;
   }
 
   // Favorites endpoints
@@ -225,13 +200,8 @@ class ApiService {
       params.lon = longitude;
       params.radius = radius_km;
     }
-    try {
-      const response = await this.api.get('/api/v1/analytics/beaches/recommend', { params });
-      return response.data;
-    } catch (error: any) {
-      console.warn('getRecommendations failed, returning empty:', error.message);
-      return { recommendations: [] };
-    }
+    const response = await this.api.get('/api/v1/analytics/beaches/recommend', { params });
+    return response.data;
   }
 
   // User profile endpoints
@@ -252,17 +222,10 @@ class ApiService {
   async getUserStats() {
     try {
       const response = await this.api.get('/api/v1/users/me/checkins/summary');
-      // normaliza campos: backend usa unique_beaches, não unique_beaches_visited
-      const data = response.data;
-      return {
-        ...data,
-        unique_beaches: data.unique_beaches ?? data.unique_beaches_visited ?? 0,
-        total_checkins: data.total_checkins ?? 0,
-        total_favorites: data.total_favorites ?? 0,
-      };
+      return response.data;
     } catch (error) {
       console.warn('getUserStats failed, returning fallback stats', error);
-      return { total_checkins: 0, total_favorites: 0, unique_beaches: 0 };
+      return { total_checkins: 0, total_favorites: 0, unique_beaches_visited: 0 };
     }
   }
 

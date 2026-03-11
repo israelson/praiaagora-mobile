@@ -1,30 +1,23 @@
 /**
- * Serviço de autenticação OAuth (Google)
- *
- * Para Expo Go: usa expo-auth-session com proxy auth.expo.io.
- * Redirect URI: https://auth.expo.io/@israelsondias/beachly-mobile
- * → Cadastrar esse URI no Web Client do Google Console em:
- *   Authorized redirect URIs → + ADD URI
+ * Serviço de autenticação OAuth (Google, Facebook)
  */
 
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import * as Facebook from 'expo-auth-session/providers/facebook';
 import { makeRedirectUri } from 'expo-auth-session';
 import api from './api';
 
+// Necessário para fechar o browser após autenticação
 WebBrowser.maybeCompleteAuthSession();
 
-const GOOGLE_WEB_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID     ?? '';
+// IDs dos apps OAuth — lidos das variáveis de ambiente (EXPO_PUBLIC_* no .env)
+const GOOGLE_WEB_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
-const GOOGLE_IOS_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID     ?? '';
+const GOOGLE_IOS_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
 
-// Para build nativo: redirect URI reverse-client-id gerado automaticamente
-const _prefix = GOOGLE_ANDROID_CLIENT_ID.replace('.apps.googleusercontent.com', '');
-export const REDIRECT_URI = makeRedirectUri({
-  native: `com.googleusercontent.apps.${_prefix}:/oauth2redirect/google`,
-});
-
-console.log('[OAuth] redirectUri:', REDIRECT_URI);
+// Facebook OAuth: preencha EXPO_PUBLIC_FACEBOOK_APP_ID no .env se utilizar
+const FACEBOOK_APP_ID = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID ?? '';
 
 export interface OAuthLoginResponse {
   access_token: string;
@@ -33,19 +26,39 @@ export interface OAuthLoginResponse {
   refresh_token: string;
 }
 
+/**
+ * Hook para login com Google
+ */
 export const useGoogleAuth = () => {
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     iosClientId: GOOGLE_IOS_CLIENT_ID,
-    redirectUri: REDIRECT_URI,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
   });
+
   return { request, response, promptAsync };
 };
 
+/**
+ * Hook para login com Facebook
+ */
+export const useFacebookAuth = () => {
+  const [request, response, promptAsync] = Facebook.useAuthRequest({
+    clientId: FACEBOOK_APP_ID,
+    redirectUri: makeRedirectUri({
+      scheme: 'beachly'
+    }),
+  });
+
+  return { request, response, promptAsync };
+};
+
+/**
+ * Envia o token OAuth para o backend e obtém nossos tokens JWT
+ */
 export const loginWithOAuth = async (
-  provider: 'google',
+  provider: 'google' | 'facebook',
   accessToken: string
 ): Promise<OAuthLoginResponse> => {
   try {
@@ -57,6 +70,9 @@ export const loginWithOAuth = async (
   }
 };
 
+/**
+ * Processa a resposta do Google e faz login no backend
+ */
 export const handleGoogleResponse = async (
   response: any
 ): Promise<OAuthLoginResponse | null> => {
@@ -69,5 +85,17 @@ export const handleGoogleResponse = async (
   return null;
 };
 
-
-
+/**
+ * Processa a resposta do Facebook e faz login no backend
+ */
+export const handleFacebookResponse = async (
+  response: any
+): Promise<OAuthLoginResponse | null> => {
+  if (response?.type === 'success') {
+    const { authentication } = response;
+    if (authentication?.accessToken) {
+      return await loginWithOAuth('facebook', authentication.accessToken);
+    }
+  }
+  return null;
+};
