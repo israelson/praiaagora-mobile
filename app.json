@@ -2,14 +2,15 @@
   "expo": {
     "name": "Beachly",
     "slug": "beachly-mobile",
-    "owner": "israelsondias",
     "scheme": "beachly",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
     "splash": {
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1BADB0"
+      "backgroundColor": "#0ea5e9"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -19,15 +20,7 @@
       "bundleIdentifier": "com.beachly.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Beachly precisa da sua localização para mostrar praias próximas",
-        "NSLocationAlwaysUsageDescription": "Beachly precisa da sua localização para enviar notificações sobre praias favoritas",
-        "LSApplicationQueriesSchemes": [
-          "waze",
-          "comgooglemaps",
-          "maps",
-          "moovit",
-          "osmand.navigation",
-          "here-route"
-        ]
+        "NSLocationAlwaysUsageDescription": "Beachly precisa da sua localização para enviar notificações sobre praias favoritas"
       },
       "config": {
         "googleMapsApiKey": "AIzaSyDavvE9VitYMiWJj5rN7x_KTzRQuTjuOlc"
@@ -35,13 +28,13 @@
     },
     "android": {
       "package": "com.beachly.app",
-      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0ea5e9"
+      },
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "POST_NOTIFICATIONS",
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "ACCESS_COARSE_LOCATION"
       ],
       "config": {
         "googleMaps": {
@@ -50,21 +43,7 @@
       }
     },
     "plugins": [
-      "expo-web-browser",
-      [
-        "expo-notifications",
-        {
-          "color": "#0ea5e9",
-          "androidMode": "default",
-          "androidCollapsedTitle": "Beachly"
-        }
-      ]
-    ],
-    "extra": {
-      "API_BASE_URL": "http://76.13.232.232:8000",
-      "eas": {
-        "projectId": "9105dae8-c758-4b52-8250-cf5d0e0e3712"
-      }
-    }
+      "expo-web-browser"
+    ]
   }
 }
