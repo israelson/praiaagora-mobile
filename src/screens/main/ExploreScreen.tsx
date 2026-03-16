@@ -12,7 +12,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import api from '../../services/api';
 import BeachCard from '../../components/beach/BeachCard';
-import SkeletonBeachCard from '../../components/beach/SkeletonBeachCard';
 import Input from '../../components/ui/Input';
 import { theme } from '../../theme';
 
@@ -204,18 +203,6 @@ export default function ExploreScreen({ navigation }: any) {
     </View>
   ), []);
 
-  // Skeleton shown during initial load (no data yet)
-  const renderSkeleton = () => (
-    <View>
-      {renderHeader}
-      {[1, 2, 3, 4, 5].map((i) => <SkeletonBeachCard key={i} />)}
-    </View>
-  );
-
-  if (loading && beaches.length === 0) {
-    return <View style={styles.container}><View style={styles.listContent}>{renderSkeleton()}</View></View>;
-  }
-
   return (
     <View style={styles.container}>
       <FlatList
@@ -226,12 +213,7 @@ export default function ExploreScreen({ navigation }: any) {
         ListEmptyComponent={!loading ? renderEmpty : null}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={loadBeaches}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-          />
+          <RefreshControl refreshing={loading} onRefresh={loadBeaches} />
         }
       />
     </View>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   RefreshControl,
   TouchableOpacity,
   Alert,
-  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,7 +16,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import api from '../../services/api';
 import BeachCard from '../../components/beach/BeachCard';
-import SkeletonBeachCard from '../../components/beach/SkeletonBeachCard';
 import Card from '../../components/ui/Card';
 import { useAutoCheckin } from '../../hooks/useAutoCheckin';
 import { theme } from '../../theme';
@@ -30,26 +28,6 @@ export default function HomeScreen({ navigation }: any) {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<any>(null);
-
-  // ── Animations ──────────────────────────────────────────────────────────────
-  const headerAnim = useRef(new Animated.Value(0)).current;
-  const mapScale = useRef(new Animated.Value(1)).current;
-  const exploreScale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.timing(headerAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-  }, [headerAnim]);
-
-  const pressIn = (scale: Animated.Value) =>
-    Animated.spring(scale, { toValue: 0.93, useNativeDriver: true, speed: 30 }).start();
-
-  const pressOut = (scale: Animated.Value) =>
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
-  // ────────────────────────────────────────────────────────────────────────────
 
   // Auto check-in hook - monitors nearby beaches automatically
   const { isChecking, lastCheckin, error: checkinError } = useAutoCheckin(nearbyBeaches, {
@@ -86,19 +64,9 @@ export default function HomeScreen({ navigation }: any) {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Pede permissão e localização uma única vez para evitar condição de corrida
-      const granted = await requestLocationPermission();
-      if (!granted) {
-        console.log('Location permission not granted');
-        setLoading(false);
-        return;
-      }
-      const currentLocation = await Location.getCurrentPositionAsync({});
-      setLocation(currentLocation.coords);
-
       await Promise.all([
-        loadNearbyBeaches(currentLocation.coords),
-        loadRecommendations(currentLocation.coords),
+        loadNearbyBeaches(),
+        loadRecommendations(),
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -107,27 +75,46 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
-  const loadNearbyBeaches = async (coords: { latitude: number; longitude: number }) => {
+  const loadNearbyBeaches = async () => {
     try {
+      // Mostrar rationale antes do prompt nativo para evitar que o sistema
+      // apresente a caixa de diálogo inesperadamente logo após o login.
+      const granted = await requestLocationPermission();
+      if (!granted) {
+        console.log('Location permission not granted');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setLocation(location.coords);
+
       const response = await api.getNearbyBeaches(
-        coords.latitude,
-        coords.longitude,
+        location.coords.latitude,
+        location.coords.longitude,
         50
       );
-      // A API pode retornar array direto ou { beaches: [] }
-      const list = Array.isArray(response) ? response : response.beaches || [];
-      setNearbyBeaches(list.slice(0, 5));
+      setNearbyBeaches(response.beaches.slice(0, 5));
     } catch (error) {
       console.error('Error loading nearby beaches:', error);
     }
   };
 
-  const loadRecommendations = async (coords: { latitude: number; longitude: number }) => {
+  const loadRecommendations = async () => {
     try {
+      // Mostrar rationale antes do prompt nativo
+      const granted = await requestLocationPermission();
+      if (!granted) {
+        console.log('Location permission not granted for recommendations');
+        return;
+      }
+
+      // Obter localização atual
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      
       // Chamar API de recomendações com GPS
       const response = await api.getRecommendations(
-        coords.latitude,
-        coords.longitude,
+        currentLocation.coords.latitude,
+        currentLocation.coords.longitude,
         30 // raio de 30km
       );
       
@@ -255,82 +242,45 @@ export default function HomeScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      {/* Animated header */}
-      <Animated.View
-        style={{
-          opacity: headerAnim,
-          transform: [
-            {
-              translateY: headerAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-16, 0],
-              }),
-            },
-          ],
-        }}
+      <LinearGradient
+        colors={[theme.colors.primary, theme.colors.primaryDark]}
+        style={styles.header}
       >
-        <LinearGradient
-          colors={['#9ECFDF', '#E8B07A']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
-        >
-          <Text style={styles.greeting}>Olá, {user?.full_name?.split(' ')[0]}! 👋</Text>
-          <Text style={styles.subtitle}>Encontre a praia perfeita para você</Text>
-        </LinearGradient>
-      </Animated.View>
+        <Text style={styles.greeting}>Olá, {user?.full_name?.split(' ')[0]}! 👋</Text>
+        <Text style={styles.subtitle}>Encontre a praia perfeita para você</Text>
+      </LinearGradient>
 
       <ScrollView
         style={styles.content}
         refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={loadData}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-          />
+          <RefreshControl refreshing={loading} onRefresh={loadData} />
         }
       >
         {/* Quick Actions */}
         <View style={styles.section}>
           <View style={styles.quickActions}>
-            {/* Mapa */}
-            <Animated.View style={[styles.actionCardWrapper, { transform: [{ scale: mapScale }] }]}>
-              <TouchableOpacity
-                style={styles.actionCard}
-                onPress={() => navigation.navigate('Map')}
-                onPressIn={() => pressIn(mapScale)}
-                onPressOut={() => pressOut(mapScale)}
-                activeOpacity={1}
-              >
-                <Ionicons name="map" size={32} color={theme.colors.primary} />
-                <Text style={styles.actionText}>Mapa</Text>
-              </TouchableOpacity>
-            </Animated.View>
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('Map')}
+            >
+              <Ionicons name="map" size={32} color={theme.colors.primary} />
+              <Text style={styles.actionText}>Mapa</Text>
+            </TouchableOpacity>
 
-            {/* Buscar */}
-            <Animated.View style={[styles.actionCardWrapper, { transform: [{ scale: exploreScale }] }]}>
-              <TouchableOpacity
-                style={styles.actionCard}
-                onPress={() => navigation.navigate('Explore')}
-                onPressIn={() => pressIn(exploreScale)}
-                onPressOut={() => pressOut(exploreScale)}
-                activeOpacity={1}
-              >
-                <Ionicons name="search" size={32} color={theme.colors.primary} />
-                <Text style={styles.actionText}>Buscar</Text>
-              </TouchableOpacity>
-            </Animated.View>
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('Explore')}
+            >
+              <Ionicons name="search" size={32} color={theme.colors.primary} />
+              <Text style={styles.actionText}>Buscar</Text>
+            </TouchableOpacity>
+
+            
           </View>
         </View>
 
         {/* Favorite Beaches */}
-        {loading ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Praias Favoritas</Text>
-            {[1, 2].map((i) => <SkeletonBeachCard key={i} />)}
-          </View>
-        ) : favoriteBeaches.length > 0 && (
+        {favoriteBeaches.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Praias Favoritas</Text>
@@ -352,13 +302,7 @@ export default function HomeScreen({ navigation }: any) {
         )}
 
         {/* Recommendations */}
-        {loading ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recomendadas para Você</Text>
-            <Text style={styles.sectionSubtitle}>Baseado na sua localização</Text>
-            {[1, 2, 3].map((i) => <SkeletonBeachCard key={i} />)}
-          </View>
-        ) : recommendations.length > 0 && (
+        {recommendations.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View>
@@ -437,10 +381,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: theme.spacing.md,
   },
-  actionCardWrapper: {
-    flex: 1,
-  },
   actionCard: {
+    flex: 1,
     backgroundColor: theme.colors.surface,
     padding: theme.spacing.lg,
     borderRadius: theme.borderRadius.lg,

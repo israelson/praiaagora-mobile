@@ -1,29 +1,7 @@
 # ✅ Checklist de Publicação — Google Play & App Store
 
 > Siga na ordem. Cada item marcado com 🔴 bloqueia a publicação.
-> Atualizado em: 12/03/2026
-
----
-
-## 👇 PARAMOS AQUI — PRÓXIMO PASSO
-
-### 🔴 3.1-b Firebase — baixar novo google-services.json
-Após adicionar SHA-1 e SHA-256 no Firebase Console:
-1. Baixar o novo `google-services.json`
-2. Substituir: `cp ~/Downloads/google-services.json android/app/google-services.json`
-3. Commitar: `git add android/app/google-services.json && git commit -m "fix: add production SHA to Firebase" && git push`
-
-**SHAs do keystore `beachly-release.keystore` (alias: beachly):**
-```
-SHA-1:   8E:EF:B3:3D:B0:BE:3A:4F:9C:78:8A:B9:F4:6C:1D:A5:25:8E:01:66
-SHA-256: A5:E6:78:D3:40:E1:4B:95:E0:AE:58:90:13:E3:58:5D:3C:A8:8A:65:A4:1E:28:75:FF:13:6C:B4:B6:DC:DA:FA
-```
-**Firebase:** console.firebase.google.com → projeto **praia-agora** → ⚙️ Configurações → App `com.beachly.app` → Adicionar impressão digital
-**Google Cloud:** console.cloud.google.com → projeto **praia-agora** → APIs → Credenciais → Android Client ID → adicionar SHA-1
-
----
-
-## STATUS ATUAL — 12/03/2026
+> Atualizado em: 11/03/2026
 
 ---
 
@@ -262,37 +240,19 @@ SHA-256: A5:E6:78:D3:40:E1:4B:95:E0:AE:58:90:13:E3:58:5D:3C:A8:8A:65:A4:1E:28:75
 
 ---
 
-## RESUMO DO STATUS ATUAL — 12/03/2026
+## RESUMO DO STATUS ATUAL
 
 | Área | Status | Prioridade |
 |---|---|---|
-| OAuth credentials | ✅ Usando EXPO_PUBLIC_* do .env | ✅ FEITO |
-| Remover Facebook OAuth | ✅ Removido de Login e Register | ✅ FEITO |
-| Erros TypeScript | ✅ Zero erros | ✅ FEITO |
-| API com env var | ✅ EXPO_PUBLIC_API_URL configurado | ✅ FEITO |
-| API HTTPS (domínio real) | ⚠️ Ainda usando IP — falta SSL no VPS | 🔴 ANTES DO RELEASE |
-| Keystore produção | ✅ beachly-release.keystore gerado e configurado | ✅ FEITO |
-| Ícone do app | ✅ icon.png + adaptive-icon.png (Icon Kitchen) | ✅ FEITO |
-| Splash screen | ✅ splash.png 1284×2778 configurado | ✅ FEITO |
-| Nome do app | ✅ Beachly em todos os arquivos | ✅ FEITO |
-| EAS projectId | ✅ 9105dae8-c758-4b52-8250-cf5d0e0e3712 | ✅ FEITO |
-| Firebase SHA prod | ⏳ SHAs calculados — falta adicionar no console | 🔴 PRÓXIMO |
-| OAuth SHA prod (Google Cloud) | ⏳ Falta adicionar SHA-1 no Android Client ID | 🔴 PRÓXIMO |
-| Novo google-services.json | ⏳ Baixar após adicionar SHAs | 🔴 PRÓXIMO |
-| Build AAB produção | ❌ Não gerado | 🔴 DEPOIS DO FIREBASE |
-| Política de Privacidade | ❌ Não existe | 🟡 PLAY CONSOLE |
-| Store listing / screenshots | ❌ Não criado | 🟡 PLAY CONSOLE |
-| Permissões desnecessárias | ⚠️ RECORD_AUDIO, SYSTEM_ALERT_WINDOW no manifest | 🟡 MÉDIO |
-| versionCode | ⚠️ Em 1 (ok para 1ª publicação) | 🟢 OK |
-
----
-
-## COMMITS FEITOS (branch restore/2026-02-09)
-
-| Hash | Descrição |
-|---|---|
-| `0dd203e` | fix: use env vars for OAuth/API, remove Facebook OAuth, fix TS errors |
-| `fd47ab2` | build: add production keystore signing config (beachly-release.keystore) |
-| `973525c` | feat: add icon, adaptive-icon and splash assets; update app.json |
-| `20da1e1` | feat: replace icons with Icon Kitchen assets (all densities) |
-| `38093d6` | feat: link EAS project (projectId: 9105dae8-c758-4b52-8250-cf5d0e0e3712) |
+| OAuth credentials | ❌ Placeholder | 🔴 URGENTE |
+| API HTTPS | ❌ HTTP/IP direto | 🔴 URGENTE |
+| Keystore produção | ❌ Usando debug | 🔴 URGENTE |
+| Ícone do app | ❌ Ausente no app.json | 🔴 URGENTE |
+| Splash screen | ❌ Sem imagem | 🔴 URGENTE |
+| Nome do app | ⚠️ Inconsistente | 🟡 ALTO |
+| EAS projectId | ❌ Ausente | 🟡 ALTO |
+| Firebase SHA prod | ❌ Não configurado | 🟡 ALTO |
+| Política de Privacidade | ❌ Não existe | 🟡 ALTO |
+| Store listing / assets | ❌ Não criado | 🟡 ALTO |
+| Permissões desnecessárias | ⚠️ No manifest | 🟡 MÉDIO |
+| versionCode | ⚠️ Em 1 | 🟡 MÉDIO |

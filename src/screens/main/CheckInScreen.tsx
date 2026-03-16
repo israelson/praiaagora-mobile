@@ -14,7 +14,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 // Button removed — check-in is performed when selecting a crowd level
-import { notifyCheckinSuccess } from '../../services/notifications';
 import { theme } from '../../theme';
 
 const CROWD_LEVELS = [
@@ -25,7 +24,7 @@ const CROWD_LEVELS = [
 ];
 
 export default function CheckInScreen({ route, navigation }: any) {
-  const { beachId, beachName } = route.params;
+  const { beachId } = route.params;
   const [selectedCrowdLevel, setSelectedCrowdLevel] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [locked, setLocked] = useState(false);
@@ -130,11 +129,6 @@ export default function CheckInScreen({ route, navigation }: any) {
       const today = new Date().toISOString();
       await AsyncStorage.setItem(`last_checkin:${beachId}`, JSON.stringify({ level, date: today }));
       setLocked(true);
-
-      // Fire local notification (silent if permissions not granted)
-      if (beachName) {
-        notifyCheckinSuccess(beachName).catch(() => {});
-      }
 
       Alert.alert('Check-in Realizado!', 'Obrigado por contribuir com a comunidade Beachly 🌊');
       navigation.goBack();

@@ -1,6 +1,4 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, ActivityIndicator, Animated, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,22 +43,21 @@ function TabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#1BADB0',
+        tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textSecondary,
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
-          borderTopColor: '#D4EEF0',
-          borderTopWidth: 1.5,
+          borderTopColor: theme.colors.border,
           height: 60,
           paddingBottom: 8,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '600',
+          fontWeight: '500',
         },
         headerStyle: {
-          backgroundColor: '#1BADB0',
+          backgroundColor: theme.colors.primary,
         },
         headerTintColor: theme.colors.textInverse,
         headerTitleStyle: {
@@ -110,7 +107,7 @@ function MainStack() {
     <Stack.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#1BADB0',
+          backgroundColor: theme.colors.primary,
         },
         headerTintColor: theme.colors.textInverse,
         headerTitleStyle: {
@@ -157,52 +154,11 @@ function MainStack() {
   );
 }
 
-function SplashScreen() {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, speed: 8, bounciness: 10, useNativeDriver: true }),
-    ]).start();
-  }, [fadeAnim, scaleAnim]);
-
-  return (
-    <LinearGradient colors={['#9ECFDF', '#E8B07A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={splashStyles.container}>
-      <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
-        <Ionicons name="water" size={80} color="#ffffff" />
-        <Text style={splashStyles.title}>Beachly</Text>
-        <Text style={splashStyles.subtitle}>Viva o melhor do litoral.</Text>
-      </Animated.View>
-      <ActivityIndicator style={splashStyles.spinner} size="small" color={theme.colors.textInverse} />
-    </LinearGradient>
-  );
-}
-
-const splashStyles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: theme.colors.textInverse,
-    marginTop: theme.spacing.md,
-    letterSpacing: 1,
-  },
-  subtitle: {
-    fontSize: theme.fontSize.md,
-    color: theme.colors.textInverse,
-    opacity: 0.85,
-    marginTop: theme.spacing.xs,
-  },
-  spinner: { position: 'absolute', bottom: 60 },
-});
-
 export default function RootNavigator() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <SplashScreen />;
+    return null; // Could show a splash screen here
   }
 
   return user ? <MainStack /> : <AuthStack />;

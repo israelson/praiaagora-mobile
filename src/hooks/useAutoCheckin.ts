@@ -163,11 +163,9 @@ export function useAutoCheckin(
   }, [enabled, beaches, checkInterval, maxDistance]);
 
   // Limpar check-ins quando lista de praias mudar significativamente
-  const beachIdsKey = beaches.map(b => b.id).join(',');
   useEffect(() => {
     checkedBeachesRef.current.clear();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [beachIdsKey]);
+  }, [beaches.map(b => b.id).join(',')]);
 
   return state;
 }
