@@ -2,8 +2,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // URL base da API — defina EXPO_PUBLIC_API_URL no .env para sobrescrever
-// Exemplo: EXPO_PUBLIC_API_URL=https://api.praiaagora.com.br
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://76.13.232.232:8000';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://srv1339967.hstgr.cloud';
 
 class ApiService {
   private api: AxiosInstance;
