@@ -24,7 +24,7 @@ import { theme } from '../../theme';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getWindDirection, formatWindInfo } from '../../utils/weather';
-import { openNavigationWithChoice } from '../../utils/navigation';
+import { openNavigationWithChoice, openUber } from '../../utils/navigation';
 
 const getTimeAgo = (dateString: string) => {
   try {
@@ -206,13 +206,23 @@ export default function BeachDetailScreen({ route, navigation }: any) {
           {/* Botão Como Chegar e ações (Check-in / Favoritos) */}
           <View style={styles.navigationActionsRow}>
             {beach.latitude && beach.longitude && (
-              <TouchableOpacity
-                style={styles.navigationButton}
-                onPress={() => openNavigationWithChoice(beach.latitude, beach.longitude, beach.name)}
-              >
-                <Ionicons name="navigate" size={20} color={theme.colors.textInverse} />
-                <Text style={styles.navigationButtonText}>Como Chegar</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={styles.navigationButton}
+                  onPress={() => openNavigationWithChoice(beach.latitude, beach.longitude, beach.name)}
+                >
+                  <Ionicons name="navigate" size={20} color={theme.colors.textInverse} />
+                  <Text style={styles.navigationButtonText}>Como Chegar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.uberButton}
+                  onPress={() => openUber(beach.latitude, beach.longitude, beach.name)}
+                >
+                  <Ionicons name="car-sport" size={20} color={theme.colors.textInverse} />
+                  <Text style={styles.navigationButtonText}>Uber</Text>
+                </TouchableOpacity>
+              </>
             )}
 
             <View style={styles.headerActionsRow}>
@@ -833,6 +843,16 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverse,
     fontSize: theme.fontSize.md,
     fontWeight: theme.fontWeight.semibold,
+  },
+  uberButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.full,
+    gap: theme.spacing.xs,
+    alignSelf: 'flex-start',
   },
   cityName: {
     fontSize: theme.fontSize.lg,

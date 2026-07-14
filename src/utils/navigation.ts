@@ -192,3 +192,23 @@ export async function openNavigation(
 ) {
   return openNavigationWithChoice(latitude, longitude, beachName);
 }
+
+/**
+ * Abre o Uber com a corrida já montada até a praia (retirada = localização
+ * atual). Usa o universal link da Uber, que funciona com ou sem o app
+ * instalado (cai no navegador/loja de apps automaticamente).
+ */
+export async function openUber(
+  latitude: number,
+  longitude: number,
+  beachName?: string,
+) {
+  const nickname = encodeURIComponent(beachName ?? 'Praia');
+  const url =
+    `https://m.uber.com/ul/?action=setPickup` +
+    `&pickup=my_location` +
+    `&dropoff[latitude]=${latitude}` +
+    `&dropoff[longitude]=${longitude}` +
+    `&dropoff[nickname]=${nickname}`;
+  await Linking.openURL(url);
+}
