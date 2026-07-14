@@ -28,14 +28,54 @@ import { openNavigationWithChoice, openUber } from '../../utils/navigation';
 
 const getTimeAgo = (dateString: string) => {
   try {
-    return formatDistanceToNow(new Date(dateString), { 
-      addSuffix: true, 
-      locale: ptBR 
+    return formatDistanceToNow(new Date(dateString), {
+      addSuffix: true,
+      locale: ptBR
     });
   } catch {
     return 'agora';
   }
 };
+
+// A API não define uma enum fixa para partner.category/amenities (são strings
+// livres), então casamos por palavra-chave em vez de valor exato.
+const FEATURE_KEYWORDS: Record<string, string[]> = {
+  lifeguard: ['lifeguard', 'salva-vidas', 'salvavidas', 'guarda-vidas', 'guardavidas'],
+  parking: ['parking', 'estacionamento'],
+  bathroom: ['bathroom', 'banheiro', 'restroom', 'toilet', 'sanitário', 'sanitario'],
+  kiosk: ['kiosk', 'quiosque'],
+  accessible: ['accessib', 'acessív', 'acessiv', 'wheelchair'],
+};
+
+function partnersForFeature(partners: any[], feature: keyof typeof FEATURE_KEYWORDS) {
+  const keywords = FEATURE_KEYWORDS[feature];
+  return partners.filter((p) => {
+    const haystack = [p.category, p.partner_type, ...(Array.isArray(p.amenities) ? p.amenities : [])]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return keywords.some((kw) => haystack.includes(kw));
+  });
+}
+
+function FeaturePartners({ partners, onPress }: { partners: any[]; onPress: (partnerId: string) => void }) {
+  if (partners.length === 0) return null;
+  return (
+    <View style={styles.featurePartners}>
+      {partners.map((partner) => (
+        <TouchableOpacity
+          key={partner.id}
+          style={styles.featurePartnerChip}
+          onPress={() => onPress(partner.id)}
+        >
+          <Text style={styles.featurePartnerChipText} numberOfLines={1}>
+            {partner.display_name ?? partner.business_name}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
 
 export default function BeachDetailScreen({ route, navigation }: any) {
   const { beachId } = route.params;
@@ -723,33 +763,63 @@ export default function BeachDetailScreen({ route, navigation }: any) {
             <Text style={styles.sectionTitle}>Infraestrutura</Text>
             <View style={styles.features}>
               {beach.has_lifeguard && (
-                <View style={styles.feature}>
-                  <Ionicons name="shield-checkmark" size={20} color={theme.colors.success} />
-                  <Text style={styles.featureText}>Salva-vidas</Text>
+                <View style={styles.featureWrapper}>
+                  <View style={styles.feature}>
+                    <Ionicons name="shield-checkmark" size={20} color={theme.colors.success} />
+                    <Text style={styles.featureText}>Salva-vidas</Text>
+                  </View>
+                  <FeaturePartners
+                    partners={partnersForFeature(partners, 'lifeguard')}
+                    onPress={(id) => navigation.navigate('PartnerDetail', { partnerId: id })}
+                  />
                 </View>
               )}
               {beach.has_parking && (
-                <View style={styles.feature}>
-                  <Ionicons name="car" size={20} color={theme.colors.success} />
-                  <Text style={styles.featureText}>Estacionamento</Text>
+                <View style={styles.featureWrapper}>
+                  <View style={styles.feature}>
+                    <Ionicons name="car" size={20} color={theme.colors.success} />
+                    <Text style={styles.featureText}>Estacionamento</Text>
+                  </View>
+                  <FeaturePartners
+                    partners={partnersForFeature(partners, 'parking')}
+                    onPress={(id) => navigation.navigate('PartnerDetail', { partnerId: id })}
+                  />
                 </View>
               )}
               {beach.has_bathroom && (
-                <View style={styles.feature}>
-                  <Ionicons name="fitness" size={20} color={theme.colors.success} />
-                  <Text style={styles.featureText}>Banheiros</Text>
+                <View style={styles.featureWrapper}>
+                  <View style={styles.feature}>
+                    <Ionicons name="fitness" size={20} color={theme.colors.success} />
+                    <Text style={styles.featureText}>Banheiros</Text>
+                  </View>
+                  <FeaturePartners
+                    partners={partnersForFeature(partners, 'bathroom')}
+                    onPress={(id) => navigation.navigate('PartnerDetail', { partnerId: id })}
+                  />
                 </View>
               )}
               {beach.has_kiosk && (
-                <View style={styles.feature}>
-                  <Ionicons name="storefront" size={20} color={theme.colors.success} />
-                  <Text style={styles.featureText}>Quiosques</Text>
+                <View style={styles.featureWrapper}>
+                  <View style={styles.feature}>
+                    <Ionicons name="storefront" size={20} color={theme.colors.success} />
+                    <Text style={styles.featureText}>Quiosques</Text>
+                  </View>
+                  <FeaturePartners
+                    partners={partnersForFeature(partners, 'kiosk')}
+                    onPress={(id) => navigation.navigate('PartnerDetail', { partnerId: id })}
+                  />
                 </View>
               )}
               {beach.accessible && (
-                <View style={styles.feature}>
-                  <Ionicons name="accessibility" size={20} color={theme.colors.success} />
-                  <Text style={styles.featureText}>Acessível</Text>
+                <View style={styles.featureWrapper}>
+                  <View style={styles.feature}>
+                    <Ionicons name="accessibility" size={20} color={theme.colors.success} />
+                    <Text style={styles.featureText}>Acessível</Text>
+                  </View>
+                  <FeaturePartners
+                    partners={partnersForFeature(partners, 'accessible')}
+                    onPress={(id) => navigation.navigate('PartnerDetail', { partnerId: id })}
+                  />
                 </View>
               )}
             </View>
@@ -926,15 +996,35 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: theme.spacing.md,
   },
+  featureWrapper: {
+    width: '45%',
+  },
   feature: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
-    width: '45%',
   },
   featureText: {
     fontSize: theme.fontSize.sm,
     color: theme.colors.text,
+  },
+  featurePartners: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.xs,
+    marginLeft: 28,
+  },
+  featurePartnerChip: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.full,
+    paddingVertical: 3,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  featurePartnerChipText: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
   },
   predictionText: {
     fontSize: theme.fontSize.md,
