@@ -7,27 +7,29 @@
 
 ## 🔴 0. SEGURANÇA — resolver antes de qualquer outra coisa
 
-### 0.1 Senha do keystore de produção vazada publicamente
-- [ ] `android/gradle.properties` está commitado no git **e o repositório é público no GitHub**
-      (`israelson/praiaagora-mobile`), expondo `MYAPP_UPLOAD_STORE_PASSWORD` e
-      `MYAPP_UPLOAD_KEY_PASSWORD` (`PraiaAgora@2026!`) em texto puro pra qualquer pessoa.
-- [ ] Como o app **ainda não teve nenhum AAB de produção gerado/enviado**, é seguro gerar um
-      keystore novo agora (trocar não quebra nada que já esteja publicado):
-  ```bash
-  keytool -genkey -v -keystore android/app/beachly-release.keystore \
-    -alias beachly -keyalg RSA -keysize 2048 -validity 10000
-  ```
-- [ ] Depois de gerar o novo, **atualizar as fingerprints SHA-1/SHA-256 no Firebase e no
-      Google Cloud OAuth** (ver item 4 abaixo — precisa ser feito de qualquer forma).
-- [ ] Remover `android/gradle.properties` do controle de versão:
-  ```bash
-  git rm --cached android/gradle.properties
-  echo "android/gradle.properties" >> .gitignore
-  ```
-- [ ] Mover as credenciais para fora do arquivo versionado — usar
-      `~/.gradle/gradle.properties` (fora do repo) ou variáveis de ambiente lidas no `build.gradle`.
-- [ ] Considerar remover o arquivo do **histórico** do git também (`git filter-repo` ou BFG),
-      já que a senha antiga ficou exposta publicamente mesmo depois de removida do HEAD.
+### ✅ 0.1 Senha do keystore de produção vazada publicamente — resolvido em 15/07/2026
+- [x] Keystore local antigo (usado só pra build local via `gradlew`) tinha a senha
+      (`PraiaAgora@2026!`) exposta no git. Gerado um keystore local novo
+      (`android/app/beachly-release.keystore`), senha nova fora do repo.
+- [x] `android/gradle.properties` não tem mais as senhas em texto puro — só
+      `MYAPP_UPLOAD_STORE_FILE` e `MYAPP_UPLOAD_KEY_ALIAS`. Senhas novas estão em
+      `~/.gradle/gradle.properties` (fora do repo, permissão 600).
+- [x] **Descoberto durante o processo**: o build de produção real (`eas build`) não usa
+      esse keystore local — o EAS já tinha keystores próprios, gerenciados remotamente
+      pela Expo. Existem múltiplas "Build Credentials" no projeto (`FRtgvfeI3i` e
+      `ETP-A9KoVf`); a que o `eas build --profile production` de fato usa é a marcada
+      `(default)`, confirmada pelo log do build: **`ETP-A9KoVf`**. Nenhuma delas nunca
+      esteve no git. Decisão: manter o keystore do EAS (`ETP-A9KoVf`) como o oficial de
+      produção. O keystore local gerado nesta sessão fica sem uso (só serviria pra build
+      local via `gradlew`, que hoje não é o fluxo usado).
+- [x] Fingerprints SHA-1/SHA-256 no Firebase e no Google Cloud OAuth atualizadas com o
+      SHA do keystore `ETP-A9KoVf` (ver item 4 abaixo) — depois de duas tentativas
+      erradas (local, depois `FRtgvfeI3i`) até confirmar qual é o real.
+- [ ] Ainda pendente: **considerar remover a senha antiga do histórico do git**
+      (`git filter-repo` ou BFG) — ela ficou exposta publicamente, e como o repo é
+      público qualquer um que já tenha clonado viu. Não é bloqueante (a senha antiga
+      não protege o keystore que assina de verdade, que é o do EAS), mas é limpeza
+      recomendada — reescreve histórico e exige force-push, fazer só se decidido.
 
 ---
 
@@ -71,9 +73,17 @@
 | EAS build profile `production` gera AAB (`app-bundle`) | ✅ resolvido |
 | EAS secrets (API URL, Google OAuth) | ✅ resolvido |
 
-### 🔴 3.1 Nenhum AAB de produção foi gerado ainda
-- [ ] Rodar `eas build --platform android --profile production` (depois de resolver o item 0.1)
-- [ ] Baixar e testar o AAB/APK gerado em um device físico antes de subir na loja
+### ✅ 3.1 Primeiro AAB de produção gerado — resolvido em 15/07/2026
+- [x] `eas build --platform android --profile production` rodou com sucesso, assinado
+      com o keystore real do EAS (`ETP-A9KoVf`).
+  ```
+  Build ID: 12a238d0-7eff-4ce9-88a5-d7f7fb187897
+  AAB: https://expo.dev/artifacts/eas/Y0d6c5hh_i19fRfBiapXZhhi3apIv4aZuczxU4j3-Zg.aab
+  ```
+- [ ] Ainda falta: **baixar e testar o AAB/APK em um device físico** antes de subir na
+      loja. Como o EAS gera `.aab` (formato da Play Store, não instalável direto), pra
+      testar localmente é mais fácil gerar um APK via profile `preview` (`buildType: apk`
+      no `eas.json`) ou usar `bundletool` pra extrair um APK instalável a partir do `.aab`.
 
 ### 🟡 3.2 Versão
 - [ ] `versionCode` está em `1` e `versionName` em `"1.0.0"` — ok para o primeiro envio,
@@ -83,22 +93,17 @@
 
 ## 4. INTEGRAÇÕES
 
-### 🔴 4.1 Firebase — SHA do keystore de produção NÃO está cadastrado
-- [ ] Conferido agora: `android/app/google-services.json` **não tem nenhum
-      `certificate_hash`** cadastrado — apesar de um commit anterior dizer "Firebase SHA
-      added", isso não está refletido no arquivo atual. Login Google e outras features
-      dependentes de SHA vão falhar em build assinado de produção.
-- [ ] Depois de gerar o keystore novo (item 0.1), extrair SHA-1/SHA-256:
-  ```bash
-  keytool -exportcert -keystore android/app/beachly-release.keystore -alias beachly -rfc \
-    | openssl x509 -noout -fingerprint -sha1
-  ```
-- [ ] Cadastrar no Firebase Console → Configurações do projeto → App Android → Adicionar fingerprint
-- [ ] Baixar o `google-services.json` atualizado e substituir em `android/app/`
+### ✅ 4.1 Firebase — SHA do keystore de produção — resolvido em 15/07/2026
+- [x] `android/app/google-services.json` atualizado com `certificate_hash:
+      f3b39cf277fc6257a1fed38ecb4ce4c46387f929` — SHA-1 do keystore `ETP-A9KoVf`
+      (o que o `eas build --profile production` realmente usa, confirmado pelo
+      log do build).
 
-### 🔴 4.2 Google Cloud — OAuth Android Client com SHA de produção
-- [ ] console.cloud.google.com → Credenciais → Android Client ID → adicionar o SHA-1 novo
-      (o antigo, de debug, já foi removido no commit `1f62a58` — falta adicionar o de produção)
+### ✅ 4.2 Google Cloud — OAuth Android Client com SHA de produção — resolvido em 15/07/2026
+- [x] Client "beachlyandroid" (`652160767969-s944hv6p2a8...`) atualizado em
+      console.cloud.google.com/apis/credentials com o SHA-1 de `ETP-A9KoVf`.
+      Google avisa que a propagação pode levar de 5 min a algumas horas — testar
+      login Google só depois desse prazo.
 
 ---
 
@@ -137,13 +142,16 @@
 
 ## RESUMO DO STATUS ATUAL
 
+> Atualizado em: 15/07/2026
+
 | Área | Status |
 |---|---|
-| 🔴 Senha do keystore vazada no GitHub público | **Ação imediata necessária** |
-| 🔴 Firebase sem SHA de produção cadastrado | Bloqueia login Google em build assinado |
-| 🔴 Nenhum AAB de produção gerado ainda | Bloqueia o upload |
+| ✅ Keystore de produção oficial identificado (é o do EAS, `FRtgvfeI3i`) | Nunca foi exposto, mantido como está |
+| ✅ Firebase + Google Cloud OAuth com SHA do keystore do EAS | Resolvido hoje |
+| ✅ Primeiro AAB de produção gerado (build `12a238d0`) | Resolvido hoje — falta testar em device físico antes de subir na loja |
 | 🔴 Política de privacidade sem URL pública | Play Console exige |
 | 🔴 Assets de store listing (screenshots, banner, descrições) | Não existem ainda |
 | 🟡 Permissões não usadas no manifest | Limpeza recomendada |
 | 🟡 Conta de desenvolvedor Google Play | Confirmar se já existe |
+| 🟢 Senha antiga ainda no histórico do git | Não bloqueia (keystore que ela protegia foi apagado); considerar limpar histórico depois |
 | ✅ OAuth, HTTPS, ícone/splash, nome do app, EAS, signing config | Resolvido |

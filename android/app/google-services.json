@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "652160767969-s944hv6p2a8tnsapaae5he1fp0etpgr4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.beachly.app",
+            "certificate_hash": "f3b39cf277fc6257a1fed38ecb4ce4c46387f929"
+          }
+        },
+        {
           "client_id": "652160767969-48o45l7hcqftdbhm4odrlp4or0ujpnmi.apps.googleusercontent.com",
           "client_type": 3
         }
