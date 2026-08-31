@@ -23,48 +23,76 @@ export default function MapScreen({ route, navigation }: any) {
     loadData();
   }, []);
 
+  // Location resolves asynchronously and may arrive after the map has
+  // already mounted (and fallen back to fitting all beaches) — recenter
+  // on the user's region as soon as it's available.
+  useEffect(() => {
+    if (loading || !mapRef.current || beach || !location) return;
+    mapRef.current.animateToRegion({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      latitudeDelta: 0.2,
+      longitudeDelta: 0.2,
+    }, 500);
+  }, [location, loading, beach]);
+
   const loadData = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const userLocation = await Location.getCurrentPositionAsync({});
-        setLocation(userLocation.coords);
-      }
-
-      // Load all beaches (for map markers). API caps limit at 500; if that ever
-      // changes and rejects it, fall back to the default page instead of failing.
-      let all: any = null;
+    // Location and beaches don't depend on each other — run them in parallel
+    // instead of waiting on a (sometimes slow) GPS fix before even asking
+    // the API for beaches.
+    const locationTask = (async () => {
       try {
-        all = await api.getBeaches({ limit: 500 });
-      } catch (err: any) {
-        if (err?.response?.status === 422) {
-          console.warn('getBeaches 500 rejected, retrying without params');
-          try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+
+        // Cached fix first so we can center on the user's region right away;
+        // refine with a fresh fix in the background once it resolves.
+        const last = await Location.getLastKnownPositionAsync();
+        if (last) setLocation(last.coords);
+
+        const fresh = await Location.getCurrentPositionAsync({});
+        setLocation(fresh.coords);
+      } catch (e) {
+        console.warn('Location error', e);
+      }
+    })();
+
+    const beachesTask = (async () => {
+      try {
+        // Load all beaches (for map markers). API caps limit at 500; if that
+        // ever changes and rejects it, fall back to the default page instead
+        // of failing.
+        let all: any = null;
+        try {
+          all = await api.getBeaches({ limit: 500 });
+        } catch (err: any) {
+          if (err?.response?.status === 422) {
+            console.warn('getBeaches 500 rejected, retrying without params');
             all = await api.getBeaches();
-          } catch (e) {
-            throw e;
+          } else {
+            throw err;
           }
-        } else {
-          throw err;
         }
-      }
 
-      // Support APIs that return array or { results: [] }
-      const list = Array.isArray(all) ? all : (all?.results || all || []);
-      const filtered = (list || []).filter((b: any) => b?.latitude && b?.longitude);
-      setBeaches(filtered);
-
-      // If a specific beach was requested, also load it (to center/highlight)
-      if (beachId) {
-        const beachData = await api.getBeachById(beachId);
-        setBeach(beachData);
+        // Support APIs that return array or { results: [] }
+        const list = Array.isArray(all) ? all : (all?.results || all || []);
+        const filtered = (list || []).filter((b: any) => b?.latitude && b?.longitude);
+        setBeaches(filtered);
+      } catch (error) {
+        console.error('Error loading beaches:', error);
+        Alert.alert('Erro', 'Não foi possível carregar o mapa');
       }
-    } catch (error) {
-      console.error('Error loading map data:', error);
-      Alert.alert('Erro', 'Não foi possível carregar o mapa');
-    } finally {
-      setLoading(false);
-    }
+    })();
+
+    // If a specific beach was requested, also load it (to center/highlight)
+    const beachTask = beachId
+      ? api.getBeachById(beachId).then(setBeach).catch((e) => console.error('Error loading beach', e))
+      : Promise.resolve();
+
+    // Don't block the spinner on the GPS fix — only on the data needed to
+    // render markers. Location arrives async and re-centers the map below.
+    await Promise.all([beachesTask, beachTask]);
+    setLoading(false);
   };
 
   if (loading) {
@@ -124,7 +152,20 @@ export default function MapScreen({ route, navigation }: any) {
               return;
             }
 
-            // No beach selected: fit map to show all beaches if available
+            // No specific beach: prefer the user's own region over fitting
+            // to every beach in Brazil (slower and not what's relevant here).
+            if (location) {
+              mapRef.current.animateToRegion({
+                latitude: location.latitude,
+                longitude: location.longitude,
+                latitudeDelta: 0.2,
+                longitudeDelta: 0.2,
+              }, 500);
+              return;
+            }
+
+            // No location yet either (denied or still resolving): fall back
+            // to fitting all beaches so the map isn't stuck on a blank view.
             if (beaches.length > 0) {
               const coords: LatLng[] = beaches.map((b) => ({ latitude: b.latitude, longitude: b.longitude }));
               if (coords.length === 1) {
@@ -180,7 +221,16 @@ const styles = StyleSheet.create({
   },
   calloutContainer: {
     minWidth: 140,
-    padding: 8,
+    padding: 10,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius?.md ?? 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   calloutTitle: {
     fontSize: 14,
