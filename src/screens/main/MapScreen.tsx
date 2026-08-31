@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, LatLng } from 'react-native-maps';
+import MapView, { Marker, Callout, PROVIDER_GOOGLE, LatLng } from 'react-native-maps';
 import * as Location from 'expo-location';
 import api from '../../services/api';
 import { theme } from '../../theme';
@@ -109,9 +109,23 @@ export default function MapScreen({ route, navigation }: any) {
         showsUserLocation
         showsMyLocationButton
         onMapReady={() => {
-          // Fit map to show all beaches if available
           try {
-            if (mapRef.current && beaches.length > 0) {
+            if (!mapRef.current) return;
+
+            // A specific beach was requested: zoom straight to it and leave
+            // the other markers visible in the background, don't fit to all.
+            if (beach) {
+              mapRef.current.animateToRegion({
+                latitude: beach.latitude,
+                longitude: beach.longitude,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+              }, 500);
+              return;
+            }
+
+            // No beach selected: fit map to show all beaches if available
+            if (beaches.length > 0) {
               const coords: LatLng[] = beaches.map((b) => ({ latitude: b.latitude, longitude: b.longitude }));
               if (coords.length === 1) {
                 mapRef.current.animateToRegion({
@@ -136,11 +150,15 @@ export default function MapScreen({ route, navigation }: any) {
           <Marker
             key={b.id}
             coordinate={{ latitude: b.latitude, longitude: b.longitude }}
-            title={b.name}
-            description={b.city}
             pinColor={beach && b.id === beach.id ? theme.colors.primary : undefined}
-            onPress={() => navigation.navigate('BeachDetail', { beachId: b.id })}
-          />
+          >
+            <Callout onPress={() => navigation.navigate('BeachDetail', { beachId: b.id })}>
+              <View style={styles.calloutContainer}>
+                <Text style={styles.calloutTitle}>{b.name}</Text>
+                {!!b.city && <Text style={styles.calloutSubtitle}>{b.city}</Text>}
+              </View>
+            </Callout>
+          </Marker>
         ))}
       </MapView>
     </View>
@@ -159,5 +177,19 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  calloutContainer: {
+    minWidth: 140,
+    padding: 8,
+  },
+  calloutTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+  calloutSubtitle: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
 });
