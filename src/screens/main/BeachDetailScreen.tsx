@@ -25,6 +25,8 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getWindDirection, formatWindInfo } from '../../utils/weather';
 import { openNavigationWithChoice, openUber } from '../../utils/navigation';
+import { getStormAlert } from '../../utils/stormAlert';
+import StormAlertBanner from '../../components/beach/StormAlertBanner';
 
 const getTimeAgo = (dateString: string) => {
   try {
@@ -298,6 +300,11 @@ export default function BeachDetailScreen({ route, navigation }: any) {
             </View>
           </View>
         </LinearGradient>
+
+        {(() => {
+          const stormAlert = getStormAlert(conditions?.conditions);
+          return stormAlert && <StormAlertBanner alert={stormAlert} />;
+        })()}
 
         <View style={styles.content}>
           {/* ICP Score Card - Destaque (toque para ver composição) */}
