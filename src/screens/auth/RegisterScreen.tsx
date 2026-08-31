@@ -199,7 +199,18 @@ export default function RegisterScreen({ navigation }: any) {
               onChangeText={setConfirmPassword}
               secureTextEntry
               icon="lock-closed"
+              error={
+                confirmPassword.length > 0 && password !== confirmPassword
+                  ? 'As senhas não coincidem'
+                  : undefined
+              }
             />
+            {confirmPassword.length > 0 && password === confirmPassword && (
+              <View style={styles.passwordMatchRow}>
+                <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
+                <Text style={styles.passwordMatchText}>As senhas coincidem</Text>
+              </View>
+            )}
 
             <Button
               title="Criar Conta"
@@ -279,5 +290,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: theme.spacing.lg,
     opacity: 0.8,
+  },
+  passwordMatchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginTop: -theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  passwordMatchText: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.success,
   },
 });

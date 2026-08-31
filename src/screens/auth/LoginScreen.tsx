@@ -26,7 +26,6 @@ export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   // OAuth hooks
@@ -143,7 +142,7 @@ export default function LoginScreen({ navigation }: any) {
               placeholder="••••••••"
               value={password}
               onChangeText={setPassword}
-              secureTextEntry={!showPassword}
+              secureTextEntry
               icon="lock-closed"
             />
 

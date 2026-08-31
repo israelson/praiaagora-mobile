@@ -16,17 +16,6 @@ import SkeletonBeachCard from '../../components/beach/SkeletonBeachCard';
 import Input from '../../components/ui/Input';
 import { theme } from '../../theme';
 
-const CITIES = [
-  'Todas',
-  'Florianópolis',
-  'Balneário Camboriú',
-  'Itajaí',
-  'Bombinhas',
-  'Porto Belo',
-  'Penha',
-  'Navegantes',
-];
-
 const WATER_QUALITY_FILTERS = [
   { label: 'Todas', value: 'ALL' },
   { label: '✅ Próprias', value: 'PROPER' },
@@ -54,7 +43,7 @@ export default function ExploreScreen({ navigation }: any) {
   const loadBeaches = async () => {
     setLoading(true);
     try {
-      const params: any = { limit: 200 };
+      const params: any = { limit: 500 };
       const response = await api.getBeaches(params);
       const beachesArray = Array.isArray(response) ? response : response.beaches || [];
       setBeaches(beachesArray);
@@ -65,6 +54,13 @@ export default function ExploreScreen({ navigation }: any) {
       setLoading(false);
     }
   };
+
+  const cities = useMemo(() => {
+    const uniqueCities = Array.from(
+      new Set(beaches.map((beach: any) => beach.city).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    return ['Todas', ...uniqueCities];
+  }, [beaches]);
 
   const filterBeaches = () => {
     let filtered = [...beaches];
@@ -134,7 +130,7 @@ export default function ExploreScreen({ navigation }: any) {
         <Text style={styles.filterLabel}>Cidade:</Text>
         <FlatList
           horizontal
-          data={CITIES}
+          data={cities}
           keyExtractor={(item) => item}
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -192,7 +188,7 @@ export default function ExploreScreen({ navigation }: any) {
         {filteredBeaches.length} praias encontradas
       </Text>
     </View>
-  ), [searchQuery, selectedCity, waterQualityFilter, filteredBeaches]);
+  ), [searchQuery, selectedCity, waterQualityFilter, filteredBeaches, cities]);
 
   const renderEmpty = useCallback(() => (
     <View style={styles.emptyContainer}>

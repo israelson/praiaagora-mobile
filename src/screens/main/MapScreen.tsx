@@ -11,7 +11,7 @@ import * as Location from 'expo-location';
 import api from '../../services/api';
 import { theme } from '../../theme';
 
-export default function MapScreen({ route }: any) {
+export default function MapScreen({ route, navigation }: any) {
   const { beachId } = route.params || {};
   const [beach, setBeach] = useState<any>(null);
   const [beaches, setBeaches] = useState<any[]>([]);
@@ -31,15 +31,14 @@ export default function MapScreen({ route }: any) {
         setLocation(userLocation.coords);
       }
 
-      // Load all beaches (for map markers). Some backends may reject very large limits,
-      // so try a safe limit and fall back to default list if we get a 422.
+      // Load all beaches (for map markers). API caps limit at 500; if that ever
+      // changes and rejects it, fall back to the default page instead of failing.
       let all: any = null;
       try {
-        all = await api.getBeaches({ limit: 1000 });
+        all = await api.getBeaches({ limit: 500 });
       } catch (err: any) {
-        // If backend rejects the large limit, retry without params
         if (err?.response?.status === 422) {
-          console.warn('getBeaches 1000 rejected, retrying without params');
+          console.warn('getBeaches 500 rejected, retrying without params');
           try {
             all = await api.getBeaches();
           } catch (e) {
@@ -92,10 +91,12 @@ export default function MapScreen({ route }: any) {
         longitudeDelta: 0.2,
       }
     : {
-        latitude: -27.5954,
-        longitude: -48.548,
-        latitudeDelta: 2,
-        longitudeDelta: 2,
+        // Generic Brazil-wide view; onMapReady's fitToCoordinates zooms to the
+        // loaded beaches right after, this is just the fallback if that fails.
+        latitude: -14.235,
+        longitude: -51.9253,
+        latitudeDelta: 40,
+        longitudeDelta: 40,
       };
 
   return (
@@ -138,6 +139,7 @@ export default function MapScreen({ route }: any) {
             title={b.name}
             description={b.city}
             pinColor={beach && b.id === beach.id ? theme.colors.primary : undefined}
+            onPress={() => navigation.navigate('BeachDetail', { beachId: b.id })}
           />
         ))}
       </MapView>

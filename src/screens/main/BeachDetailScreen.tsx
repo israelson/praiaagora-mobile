@@ -322,7 +322,10 @@ export default function BeachDetailScreen({ route, navigation }: any) {
                     />
                   </View>
                 </View>
-                <Text style={styles.icpScore}>{conditions.icp.toFixed(0)}</Text>
+                <View style={styles.icpScoreRow}>
+                  <Text style={styles.icpScore}>{conditions.icp.toFixed(0)}</Text>
+                  <Text style={styles.icpScoreUnit}>/100</Text>
+                </View>
                 <Text style={styles.icpDescription}>
                   {conditions.icp >= 80 ? 'Condições excelentes para aproveitar a praia!' :
                    conditions.icp >= 60 ? 'Boas condições para ir à praia' :
@@ -1081,12 +1084,25 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverse,
     fontWeight: theme.fontWeight.semibold,
   },
+  icpScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    marginVertical: theme.spacing.sm,
+  },
   icpScore: {
     fontSize: 64,
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.textInverse,
-    textAlign: 'center',
-    marginVertical: theme.spacing.sm,
+    lineHeight: 64,
+  },
+  icpScoreUnit: {
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.textInverse,
+    opacity: 0.85,
+    marginLeft: 4,
+    marginBottom: 10,
   },
   icpDescription: {
     fontSize: theme.fontSize.sm,
@@ -1107,10 +1123,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    flexShrink: 0,
   },
   navigationActionsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: theme.spacing.sm,
     marginTop: theme.spacing.sm,

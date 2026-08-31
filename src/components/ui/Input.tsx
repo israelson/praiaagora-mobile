@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useState } from 'react';
 import {
   TextInput,
   View,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TextInputProps,
   ViewStyle,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme';
@@ -18,7 +19,10 @@ interface InputProps extends TextInputProps {
 }
 
 const Input = forwardRef<TextInput, InputProps>(
-  ({ label, error, icon, containerStyle, style, ...rest }, ref) => {
+  ({ label, error, icon, containerStyle, style, secureTextEntry, ...rest }, ref) => {
+    const [passwordVisible, setPasswordVisible] = useState(false);
+    const isPasswordField = secureTextEntry !== undefined;
+
     return (
       <View style={[styles.container, containerStyle]}>
         {label && <Text style={styles.label}>{label}</Text>}
@@ -36,12 +40,27 @@ const Input = forwardRef<TextInput, InputProps>(
             style={[
               styles.input,
               icon && styles.inputWithIcon,
+              isPasswordField && styles.inputWithRightIcon,
               error && styles.inputError,
               style,
             ]}
             placeholderTextColor={theme.colors.textLight}
+            secureTextEntry={isPasswordField ? !passwordVisible : secureTextEntry}
             {...rest}
           />
+          {isPasswordField && (
+            <TouchableOpacity
+              onPress={() => setPasswordVisible((v) => !v)}
+              style={styles.rightIcon}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={passwordVisible ? 'eye-off' : 'eye'}
+                size={20}
+                color={theme.colors.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
         </View>
         {error && <Text style={styles.errorText}>{error}</Text>}
       </View>
@@ -75,12 +94,22 @@ const styles = StyleSheet.create({
   inputWithIcon: {
     paddingLeft: 48,
   },
+  inputWithRightIcon: {
+    paddingRight: 48,
+  },
   inputError: {
     borderColor: theme.colors.error,
   },
   icon: {
     position: 'absolute',
     left: theme.spacing.md,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    zIndex: 1,
+  },
+  rightIcon: {
+    position: 'absolute',
+    right: theme.spacing.md,
     top: '50%',
     transform: [{ translateY: -10 }],
     zIndex: 1,

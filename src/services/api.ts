@@ -34,13 +34,16 @@ class ApiService {
       async (error: AxiosError) => {
         const originalRequest = error.config as any;
         
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (
+          (error.response?.status === 401 || error.response?.status === 403) &&
+          !originalRequest._retry
+        ) {
           originalRequest._retry = true;
-          
+
           try {
             const refreshToken = await AsyncStorage.getItem('refresh_token');
             if (refreshToken) {
-              const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+              const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
                 refresh_token: refreshToken,
               });
               
