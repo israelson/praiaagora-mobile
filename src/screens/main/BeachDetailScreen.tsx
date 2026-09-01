@@ -25,7 +25,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getWindDirection, formatWindInfo } from '../../utils/weather';
 import { openNavigationWithChoice, openUber } from '../../utils/navigation';
-import { getStormAlert } from '../../utils/stormAlert';
+import { getStormAlert, buildOfficialStormAlert } from '../../utils/stormAlert';
 import StormAlertBanner from '../../components/beach/StormAlertBanner';
 
 const getTimeAgo = (dateString: string) => {
@@ -302,7 +302,11 @@ export default function BeachDetailScreen({ route, navigation }: any) {
         </LinearGradient>
 
         {(() => {
-          const stormAlert = getStormAlert(conditions?.conditions);
+          // Official INMET/Defesa Civil alert from the backend takes
+          // priority; the client-side heuristic is only a fallback for
+          // when the backend hasn't matched an alert to this municipality.
+          const stormAlert =
+            buildOfficialStormAlert(conditions?.conditions) ?? getStormAlert(conditions?.conditions);
           return stormAlert && <StormAlertBanner alert={stormAlert} />;
         })()}
 

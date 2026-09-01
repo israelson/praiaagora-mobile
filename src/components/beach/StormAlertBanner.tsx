@@ -20,8 +20,9 @@ export default function StormAlertBanner({ alert }: { alert: StormAlert }) {
         <Text style={styles.title}>{alert.title}</Text>
         <Text style={styles.message}>{alert.message}</Text>
         <Text style={styles.disclaimer}>
-          Estimativa Beachly a partir dos dados meteorológicos — não substitui alertas oficiais
-          da Defesa Civil.
+          {alert.isOfficial
+            ? 'Alerta oficial da Defesa Civil/INMET para esta região.'
+            : 'Estimativa Beachly a partir dos dados meteorológicos — não substitui alertas oficiais da Defesa Civil.'}
         </Text>
       </View>
     </View>

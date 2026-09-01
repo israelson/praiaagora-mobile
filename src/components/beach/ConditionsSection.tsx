@@ -17,6 +17,8 @@ interface Conditions {
   humidity?: number;
   weather_description?: string;
   recorded_at?: string;
+  alert_level?: 'yellow' | 'orange' | 'red' | null;
+  alert_message?: string | null;
 }
 
 interface Props {

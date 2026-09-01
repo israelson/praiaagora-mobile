@@ -7,12 +7,19 @@ export interface StormAlert {
   title: string;
   message: string;
   icon: keyof typeof Ionicons.glyphMap;
+  /** true when this came from the backend's official INMET/Defesa Civil integration */
+  isOfficial?: boolean;
 }
 
 interface ConditionsForAlert {
   weather_description?: string | null;
   wind_speed?: number | null;
   wave_height?: number | null;
+}
+
+interface OfficialAlertInput {
+  alert_level?: StormAlertLevel | null;
+  alert_message?: string | null;
 }
 
 const STORM_KEYWORDS = [
@@ -41,10 +48,30 @@ const LEVEL_ICON: Record<StormAlertLevel, keyof typeof Ionicons.glyphMap> = {
 };
 
 /**
+ * Alerta oficial da Defesa Civil/INMET, já processado e casado por município
+ * pelo backend. Deve ter prioridade sobre a heurística `getStormAlert` abaixo
+ * sempre que presente.
+ */
+export function buildOfficialStormAlert(conditions?: OfficialAlertInput | null): StormAlert | null {
+  const level = conditions?.alert_level;
+  if (!level) return null;
+
+  return {
+    level,
+    title: LEVEL_TITLE[level],
+    message:
+      conditions?.alert_message ||
+      'Alerta oficial ativo emitido pela Defesa Civil/INMET para esta região.',
+    icon: LEVEL_ICON[level],
+    isOfficial: true,
+  };
+}
+
+/**
  * Heurística própria do Beachly baseada nos dados meteorológicos já
  * retornados pela API (OpenWeather) — não é um alerta oficial da Defesa
- * Civil/INMET. Serve como aviso rápido até termos integração com uma
- * fonte oficial de alertas por município.
+ * Civil/INMET. Serve como aviso rápido apenas quando não há alerta oficial
+ * disponível para o município (ver `buildOfficialStormAlert`).
  */
 export function getStormAlert(conditions?: ConditionsForAlert | null): StormAlert | null {
   if (!conditions) return null;
