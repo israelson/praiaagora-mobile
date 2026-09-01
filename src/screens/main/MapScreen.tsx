@@ -5,8 +5,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
-import MapView, { Marker, Callout, PROVIDER_GOOGLE, LatLng } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
+import MapView, { Marker, PROVIDER_GOOGLE, LatLng } from 'react-native-maps';
 import * as Location from 'expo-location';
 import api from '../../services/api';
 import { theme } from '../../theme';
@@ -17,6 +19,11 @@ export default function MapScreen({ route, navigation }: any) {
   const [beaches, setBeaches] = useState<any[]>([]);
   const [location, setLocation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  // Tapped marker's beach — shown in a card below the map. react-native-maps'
+  // native Callout renders via a bitmap snapshot on Android that's unreliable
+  // (renders blank/invisible in practice), so this is a plain RN overlay
+  // instead, driven entirely by React state.
+  const [selectedBeach, setSelectedBeach] = useState<any>(null);
   const mapRef = useRef<MapView | null>(null);
 
   useEffect(() => {
@@ -136,6 +143,7 @@ export default function MapScreen({ route, navigation }: any) {
         initialRegion={initialRegion}
         showsUserLocation
         showsMyLocationButton
+        onPress={() => setSelectedBeach(null)}
         onMapReady={() => {
           try {
             if (!mapRef.current) return;
@@ -192,16 +200,27 @@ export default function MapScreen({ route, navigation }: any) {
             key={b.id}
             coordinate={{ latitude: b.latitude, longitude: b.longitude }}
             pinColor={beach && b.id === beach.id ? theme.colors.primary : undefined}
-          >
-            <Callout onPress={() => navigation.navigate('BeachDetail', { beachId: b.id })}>
-              <View style={styles.calloutContainer}>
-                <Text style={styles.calloutTitle}>{b.name}</Text>
-                {!!b.city && <Text style={styles.calloutSubtitle}>{b.city}</Text>}
-              </View>
-            </Callout>
-          </Marker>
+            onPress={(e) => {
+              e.stopPropagation();
+              setSelectedBeach(b);
+            }}
+          />
         ))}
       </MapView>
+
+      {selectedBeach && (
+        <TouchableOpacity
+          style={styles.selectedCard}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('BeachDetail', { beachId: selectedBeach.id })}
+        >
+          <View style={styles.selectedCardText}>
+            <Text style={styles.selectedCardTitle}>{selectedBeach.name}</Text>
+            {!!selectedBeach.city && <Text style={styles.selectedCardSubtitle}>{selectedBeach.city}</Text>}
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -219,26 +238,32 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  calloutContainer: {
-    minWidth: 140,
-    padding: 10,
+  selectedCard: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: theme.colors.card,
     borderRadius: theme.borderRadius?.md ?? 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    padding: 14,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
   },
-  calloutTitle: {
-    fontSize: 14,
+  selectedCardText: {
+    flex: 1,
+  },
+  selectedCardTitle: {
+    fontSize: 15,
     fontWeight: '600',
     color: theme.colors.text,
   },
-  calloutSubtitle: {
-    fontSize: 12,
+  selectedCardSubtitle: {
+    fontSize: 13,
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
