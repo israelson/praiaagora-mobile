@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import api from '../../services/api';
 import BeachCard from '../../components/beach/BeachCard';
@@ -31,14 +32,27 @@ export default function ExploreScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('Todas');
   const [waterQualityFilter, setWaterQualityFilter] = useState('ALL');
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
   useEffect(() => {
     loadBeaches();
+    detectUserLocation();
   }, []);
 
   useEffect(() => {
     filterBeaches();
-  }, [searchQuery, selectedCity, waterQualityFilter, beaches]);
+  }, [searchQuery, selectedCity, waterQualityFilter, beaches, userCoords]);
+
+  const detectUserLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({});
+      setUserCoords(loc.coords);
+    } catch (e) {
+      console.warn('Location error', e);
+    }
+  };
 
   const loadBeaches = async () => {
     setLoading(true);
@@ -55,15 +69,43 @@ export default function ExploreScreen({ navigation }: any) {
     }
   };
 
+  // Nearest beach to the user's GPS position tells us which state (UF) they're
+  // in — the API has no distance/state query filter, so this is done client-side
+  // against the already-loaded nationwide beach list.
+  const userState = useMemo(() => {
+    if (!userCoords || beaches.length === 0) return null;
+    let nearestState: string | null = null;
+    let nearestDist = Infinity;
+    for (const b of beaches) {
+      if (b.latitude == null || b.longitude == null || !b.state) continue;
+      const dLat = b.latitude - userCoords.latitude;
+      const dLng = b.longitude - userCoords.longitude;
+      const dist = dLat * dLat + dLng * dLng;
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestState = b.state;
+      }
+    }
+    return nearestState;
+  }, [userCoords, beaches]);
+
+  // Scope the explore list to the user's own state; fall back to every beach
+  // if location isn't available yet (or denied) so the screen never goes empty.
+  const stateBeaches = useMemo(() => {
+    if (!userState) return beaches;
+    const inState = beaches.filter((beach: any) => beach.state === userState);
+    return inState.length > 0 ? inState : beaches;
+  }, [beaches, userState]);
+
   const cities = useMemo(() => {
     const uniqueCities = Array.from(
-      new Set(beaches.map((beach: any) => beach.city).filter(Boolean))
+      new Set(stateBeaches.map((beach: any) => beach.city).filter(Boolean))
     ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
     return ['Todas', ...uniqueCities];
-  }, [beaches]);
+  }, [stateBeaches]);
 
   const filterBeaches = () => {
-    let filtered = [...beaches];
+    let filtered = [...stateBeaches];
 
     if (selectedCity !== 'Todas') {
       filtered = filtered.filter((beach: any) => beach.city === selectedCity);
