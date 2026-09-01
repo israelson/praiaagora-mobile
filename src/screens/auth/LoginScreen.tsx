@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -9,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
 import Input from '../../components/ui/Input';
@@ -21,12 +22,33 @@ import {
   handleGoogleResponse,
 } from '../../services/oauth';
 
+// Default until GPS resolves a region — today's main market, kept as a
+// sane fallback if location is denied/unavailable.
+const DEFAULT_STATE_NAME = 'Santa Catarina';
+
 export default function LoginScreen({ navigation }: any) {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [stateName, setStateName] = useState(DEFAULT_STATE_NAME);
+
+  // Tagline follows the user's own state via GPS + reverse geocoding, so it
+  // reads correctly as Beachly expands beyond SC/CE without further changes.
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        const position = await Location.getCurrentPositionAsync({});
+        const [address] = await Location.reverseGeocodeAsync(position.coords);
+        if (address?.region) setStateName(address.region);
+      } catch (e) {
+        console.warn('State detection error', e);
+      }
+    })();
+  }, []);
 
   // OAuth hooks
   const {
@@ -102,10 +124,10 @@ export default function LoginScreen({ navigation }: any) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Ionicons name="water" size={80} color={theme.colors.textInverse} />
+            <Image source={require('../../../assets/play-store-icon.png')} style={styles.logo} />
             <Text style={styles.title}>Beachly</Text>
             <Text style={styles.subtitle}>
-              Encontre as melhores praias de Santa Catarina
+              Encontre as melhores praias de {stateName}
             </Text>
           </View>
 
@@ -183,6 +205,11 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: theme.spacing.xxl,
+  },
+  logo: {
+    width: 96,
+    height: 96,
+    borderRadius: theme.borderRadius.lg,
   },
   title: {
     fontSize: theme.fontSize.xxxl,
